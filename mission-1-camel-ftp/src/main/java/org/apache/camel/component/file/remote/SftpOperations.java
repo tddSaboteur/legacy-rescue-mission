@@ -73,7 +73,6 @@ import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import static org.apache.camel.util.ObjectHelper.isNotEmpty;
 
 /**
@@ -222,18 +221,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
-        if (isNotEmpty(sftpConfig.getCiphers())) {
-            LOG.debug("Using ciphers: {}", sftpConfig.getCiphers());
-            Hashtable<String, String> ciphers = new Hashtable<>();
-            ciphers.put("cipher.s2c", sftpConfig.getCiphers());
-            ciphers.put("cipher.c2s", sftpConfig.getCiphers());
-            JSch.setConfig(ciphers);
-        }
-
-        if (isNotEmpty(sftpConfig.getKeyExchangeProtocols())) {
-            LOG.debug("Using KEX: {}", sftpConfig.getKeyExchangeProtocols());
-            JSch.setConfig("kex", sftpConfig.getKeyExchangeProtocols());
-        }
+        gateway.setGlobalCiphersAndKex(sftpConfig.getCiphers(),sftpConfig.getKeyExchangeProtocols());
 
         // Resolve certificate bytes once — used for both identity loading and key type detection
         byte[] certData = resolveCertificateBytes(sftpConfig);
@@ -482,6 +470,9 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         return session;
     }
+
+
+
 
     /**
      * Resolves certificate bytes from the configuration's certFile, certUri, or certBytes. Returns null if no

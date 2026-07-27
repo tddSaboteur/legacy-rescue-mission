@@ -5,8 +5,11 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Hashtable;
 
 public class SftpGateway {
 
@@ -57,9 +60,26 @@ public class SftpGateway {
             }
         }
     }
+
     public JSch createJsch(LoggingLevel jschLoggingLevel) {
-        JSch.setLogger(new JSchLogger(jschLoggingLevel ));
+        JSch.setLogger(new JSchLogger(jschLoggingLevel));
         return new JSch();
+    }
+
+    public void setGlobalCiphersAndKex(String ciphers, String keyExchangeProtocols) {
+
+        if (ciphers != null && !ciphers.isEmpty()) {
+            LOG.debug("Using ciphers: {}", ciphers);
+            java.util.Hashtable<String, String> ciphersMap = new java.util.Hashtable<>();
+            ciphersMap.put("cipher.s2c", ciphers);
+            ciphersMap.put("cipher.c2s", ciphers);
+            JSch.setConfig(ciphersMap);
+        }
+
+        if (keyExchangeProtocols != null && !keyExchangeProtocols.isEmpty()) {
+            LOG.debug("Using KEX: {}", keyExchangeProtocols);
+            JSch.setConfig("kex", keyExchangeProtocols);
+        }
     }
 
     private static final class JSchLogger implements com.jcraft.jsch.Logger {
