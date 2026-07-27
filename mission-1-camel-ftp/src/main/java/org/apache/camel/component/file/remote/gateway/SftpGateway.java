@@ -3,7 +3,6 @@ package org.apache.camel.component.file.remote.gateway;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import org.apache.camel.component.file.remote.RemoteFileConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +23,7 @@ public class SftpGateway {
             session.disconnect();
         }
     }
-    public void forceDisconectSession() {
+    public void forceDisconnectSession() {
         if (session != null) {
             session.disconnect();
         }
@@ -41,7 +40,7 @@ public class SftpGateway {
         }
     }
 
-    public void initSession(Session session, RemoteFileConfiguration configuration, int connectTimeout) throws JSchException {
+    public void initSession(Session session, int connectTimeout) throws JSchException {
         if (session == null || !session.isConnected()) {
             LOG.trace("Session isn't connected, trying to recreate and connect.");
 

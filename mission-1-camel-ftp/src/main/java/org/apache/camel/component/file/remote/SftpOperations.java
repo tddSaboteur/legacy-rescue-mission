@@ -165,7 +165,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             if (channel == null || !channel.isConnected()) {
 
-                gateway.initSession(createSession(payload.configuration),payload.configuration,endpoint.getConfiguration().getConnectTimeout());
+                gateway.initSession(createSession(payload.configuration),endpoint.getConfiguration().getConnectTimeout());
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
                 channel = gateway.openChannel();
@@ -620,7 +620,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            gateway.forceDisconectSession();
+            gateway.forceDisconnectSession();
             if (channel != null) {
                 channel.disconnect();
             }
