@@ -1,6 +1,7 @@
 package org.apache.camel.component.file.remote.gateway;
 
 import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.slf4j.Logger;
@@ -54,5 +55,8 @@ public class SftpGateway {
                 session.connect();
             }
         }
+    }
+    public JSch createJsch() {
+        return new JSch();
     }
 }

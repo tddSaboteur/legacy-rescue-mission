@@ -218,7 +218,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     //todo разобрать логику и вынести в SftpGateway
     protected Session createSession(final RemoteFileConfiguration configuration) throws JSchException {
-        final JSch jsch = new JSch();
+        final JSch jsch = gateway.createJsch();
         JSch.setLogger(new JSchLogger(endpoint.getConfiguration().getJschLoggingLevel()));
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
