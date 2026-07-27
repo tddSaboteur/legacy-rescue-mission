@@ -204,7 +204,6 @@
             </build>
         </profile>
     </profiles>
-    <!-- Добавьте этот блок build для отключения родительского плагина Camel -->
     <build>
         <plugins>
             <plugin>

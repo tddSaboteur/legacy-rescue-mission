@@ -59,6 +59,7 @@ import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
+import org.apache.camel.component.file.remote.gateway.SftpGateway;
 import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.task.BlockingTask;
@@ -88,8 +89,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private Proxy proxy;
     private SftpEndpoint endpoint;
     private ChannelSftp channel;
-    private Session session;
     private final Lock lock = new ReentrantLock();
+    private SftpGateway gateway = new SftpGateway();
 
     private static class TaskPayload {
         final RemoteFileConfiguration configuration;
@@ -163,22 +164,11 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         try {
             if (channel == null || !channel.isConnected()) {
-                if (session == null || !session.isConnected()) {
-                    LOG.trace("Session isn't connected, trying to recreate and connect.");
 
-                    session = createSession(payload.configuration);
-
-                    if (endpoint.getConfiguration().getConnectTimeout() > 0) {
-                        LOG.trace("Connecting use connectTimeout: {} ...", endpoint.getConfiguration().getConnectTimeout());
-                        session.connect(endpoint.getConfiguration().getConnectTimeout());
-                    } else {
-                        LOG.trace("Connecting ...");
-                        session.connect();
-                    }
-                }
+                gateway.initSession(createSession(payload.configuration),payload.configuration,endpoint.getConfiguration().getConnectTimeout());
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
-                channel = (ChannelSftp) session.openChannel("sftp");
+                channel = gateway.openChannel();
 
                 if (endpoint.getConfiguration().getFilenameEncoding() != null) {
                     Charset ch = Charset.forName(endpoint.getConfiguration().getFilenameEncoding());
@@ -206,6 +196,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         return true;
     }
 
+
+
     private void configureBulkRequests() {
         try {
             tryConfigureBulkRequests();
@@ -224,6 +216,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
     }
 
+    //todo разобрать логику и вынести в SftpGateway
     protected Session createSession(final RemoteFileConfiguration configuration) throws JSchException {
         final JSch jsch = new JSch();
         JSch.setLogger(new JSchLogger(endpoint.getConfiguration().getJschLoggingLevel()));
@@ -602,7 +595,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     public boolean isConnected() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            return session != null && session.isConnected() && channel != null && channel.isConnected();
+            return gateway.isConnectedSession() && channel != null && channel.isConnected();
         } finally {
             lock.unlock();
         }
@@ -612,9 +605,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     public void disconnect() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            if (session != null && session.isConnected()) {
-                session.disconnect();
-            }
+            gateway.disconnectSession();
             if (channel != null && channel.isConnected()) {
                 channel.disconnect();
             }
@@ -623,23 +614,24 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
     }
 
+
+
     @Override
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            if (session != null) {
-                session.disconnect();
-            }
+            gateway.forceDisconectSession();
             if (channel != null) {
                 channel.disconnect();
             }
         } finally {
             // ensure these
-            session = null;
             channel = null;
             lock.unlock();
         }
     }
+
+
 
     private void reconnectIfNecessary(Exchange exchange) {
         if (!isConnected()) {
@@ -1350,19 +1342,15 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         lock.lock();
         try {
             if (isConnected()) {
-                try {
-                    session.sendKeepAliveMsg();
-                    return true;
-                } catch (Exception e) {
-                    LOG.debug("SFTP session was closed. Ignoring this exception.", e);
-                    return false;
-                }
+                return gateway.sessionSendKeepAliveMsg();
             }
             return false;
         } finally {
             lock.unlock();
         }
     }
+
+
 
     @Override
     public boolean sendSiteCommand(String command) throws GenericFileOperationFailedException {
