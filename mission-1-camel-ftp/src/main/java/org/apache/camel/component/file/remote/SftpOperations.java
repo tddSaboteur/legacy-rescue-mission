@@ -57,7 +57,7 @@ import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
-import org.apache.camel.component.file.remote.gateway.JchSftpClient;
+import org.apache.camel.component.file.remote.gateway.JschSftpClient;
 import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.task.BlockingTask;
@@ -87,7 +87,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private SftpEndpoint endpoint;
     private ChannelSftp channel;
     private final Lock lock = new ReentrantLock();
-    private JchSftpClient gateway = new JchSftpClient();
+    private JschSftpClient jschClient = new JschSftpClient();
 
     private static class TaskPayload {
         final RemoteFileConfiguration configuration;
@@ -162,10 +162,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             if (channel == null || !channel.isConnected()) {
 
-                gateway.initSession(createSession(payload.configuration),endpoint.getConfiguration().getConnectTimeout());
+                jschClient.initSession(createSession(payload.configuration),endpoint.getConfiguration().getConnectTimeout());
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
-                channel = gateway.openChannel();
+                channel = jschClient.openChannel();
 
                 if (endpoint.getConfiguration().getFilenameEncoding() != null) {
                     Charset ch = Charset.forName(endpoint.getConfiguration().getFilenameEncoding());
@@ -215,11 +215,11 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     //todo разобрать логику и вынести в SftpGateway
     protected Session createSession(final RemoteFileConfiguration configuration) throws JSchException {
-        final JSch jsch = gateway.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
+        final JSch jsch = jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
-        gateway.setGlobalCiphersAndKex(sftpConfig.getCiphers(),sftpConfig.getKeyExchangeProtocols());
+        jschClient.setJSchGlobalCiphersAndKex(sftpConfig.getCiphers(),sftpConfig.getKeyExchangeProtocols());
 
         // Resolve certificate bytes once — used for both identity loading and key type detection
         byte[] certData = resolveCertificateBytes(sftpConfig);
@@ -237,13 +237,13 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 LOG.debug("Using OpenSSH certificate for authentication");
                 try {
                     byte[] keyData = Files.readAllBytes(Paths.get(sftpConfig.getPrivateKeyFile()));
-                    jsch.addIdentity(sftpConfig.getPrivateKeyFile(), keyData, certData, passphrase);
+                    jschClient.configureIdentity(sftpConfig.getPrivateKeyFile(), keyData, certData, passphrase);
                 } catch (IOException e) {
                     throw new JSchException("Cannot read private key file: " + sftpConfig.getPrivateKeyFile(), e);
                 }
             } else {
                 // No explicit cert — JSch auto-discovers <key>-cert.pub if it exists
-                jsch.addIdentity(sftpConfig.getPrivateKeyFile(), passphrase);
+                jschClient.configureIdentity(sftpConfig.getPrivateKeyFile(), passphrase);
             }
         }
 
@@ -253,7 +253,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             if (isNotEmpty(sftpConfig.getPrivateKeyPassphrase())) {
                 passphrase = sftpConfig.getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
             }
-            jsch.addIdentity("ID", sftpConfig.getPrivateKey(), certData, passphrase);
+            jschClient.configureIdentity("ID", sftpConfig.getPrivateKey(), certData, passphrase);
         }
 
         if (sftpConfig.getPrivateKeyUri() != null) {
@@ -267,7 +267,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                         sftpConfig.getPrivateKeyUri());
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 IOHelper.copyAndCloseInput(is, bos);
-                jsch.addIdentity("ID", bos.toByteArray(), certData, passphrase);
+                jschClient.configureIdentity("ID", bos.toByteArray(), certData, passphrase);
             } catch (IOException e) {
                 throw new JSchException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
             }
@@ -283,7 +283,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 sb.append(Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded())).append("\n");
                 sb.append("-----END PRIVATE KEY-----").append("\n");
 
-                jsch.addIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), certData, null);
+                jschClient.configureIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), certData, null);
             } else {
                 LOG.warn("PrivateKey in the KeyPair must be filled");
             }
@@ -536,7 +536,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     public boolean isConnected() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            return gateway.isConnectedSession() && channel != null && channel.isConnected();
+            return jschClient.isConnectedSession() && channel != null && channel.isConnected();
         } finally {
             lock.unlock();
         }
@@ -546,7 +546,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     public void disconnect() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            gateway.disconnectSession();
+            jschClient.disconnectSession();
             if (channel != null && channel.isConnected()) {
                 channel.disconnect();
             }
@@ -561,7 +561,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            gateway.forceDisconnectSession();
+            jschClient.forceDisconnectSession();
             if (channel != null) {
                 channel.disconnect();
             }
@@ -1283,7 +1283,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         lock.lock();
         try {
             if (isConnected()) {
-                return gateway.sessionSendKeepAliveMsg();
+                return jschClient.sessionSendKeepAliveMsg();
             }
             return false;
         } finally {

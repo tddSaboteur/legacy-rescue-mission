@@ -5,13 +5,15 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JchSftpClient {
+public class JschSftpClient {
 
-    private static final Logger LOG = LoggerFactory.getLogger(JchSftpClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JschSftpClient.class);
     private Session session;
+    private JSch jsch;
 
     public ChannelSftp openChannel() throws JSchException {
        return (ChannelSftp) session.openChannel("sftp");
@@ -60,10 +62,11 @@ public class JchSftpClient {
 
     public JSch createJsch(LoggingLevel jschLoggingLevel) {
         JSch.setLogger(new JSchLogger(jschLoggingLevel));
-        return new JSch();
+        jsch = new JSch();
+        return jsch;
     }
 
-    public void setGlobalCiphersAndKex(String ciphers, String keyExchangeProtocols) {
+    public void setJSchGlobalCiphersAndKex(String ciphers, String keyExchangeProtocols) {
 
         if (ciphers != null && !ciphers.isEmpty()) {
             LOG.debug("Using ciphers: {}", ciphers);
@@ -78,6 +81,15 @@ public class JchSftpClient {
             JSch.setConfig("kex", keyExchangeProtocols);
         }
     }
+
+    public void configureIdentity(String name, byte[] prvKey, byte[] pubKey, byte[] passphrase) throws JSchException {
+        jsch.addIdentity(name, prvKey, pubKey, passphrase);
+    }
+
+    public void configureIdentity(String prvKey, byte[] passphrase) throws JSchException {
+        jsch.addIdentity(prvKey, passphrase);
+    }
+
 
     private static final class JSchLogger implements com.jcraft.jsch.Logger {
 
