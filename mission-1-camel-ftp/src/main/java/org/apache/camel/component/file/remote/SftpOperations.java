@@ -326,8 +326,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             jschClient.setSessionConfig(session,"StrictHostKeyChecking", sftpConfig.getStrictHostKeyChecking());
         }
 
-        session.setServerAliveInterval(sftpConfig.getServerAliveInterval());
-        session.setServerAliveCountMax(sftpConfig.getServerAliveCountMax());
+        jschClient.configAliveSession(session, sftpConfig.getServerAliveInterval(),sftpConfig.getServerAliveCountMax());
 
         // compression
         if (sftpConfig.getCompression() > 0) {
@@ -467,6 +466,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         return session;
     }
+
 
 
 

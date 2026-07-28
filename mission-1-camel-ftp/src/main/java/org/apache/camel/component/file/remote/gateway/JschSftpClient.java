@@ -6,6 +6,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.file.remote.RemoteFileConfiguration;
+import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,10 +64,19 @@ public class JschSftpClient {
         return jsch.getSession(configuration.getUsername(), configuration.getHost(), configuration.getPort());
     }
 
-    //todo сейчас в метод нужно передавать сессию иначе сломаем многопоточку, в дальнейшем уберем в Билдер или фабрику
+
+
+
+
+    //todo сейчас в методы нужно передавать сессию иначе сломаем многопоточку, в дальнейшем уберем в билдер или фабрику
     public void setSessionConfig(Session session, String key, String value) {
         session.setConfig(key,value);
     }
+    public void configAliveSession(Session session, int interval, int count) throws JSchException {
+        session.setServerAliveInterval(interval);
+        session.setServerAliveCountMax(count);
+    }
+
 
 
 
