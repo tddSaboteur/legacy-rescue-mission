@@ -6,7 +6,6 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.file.remote.RemoteFileConfiguration;
-import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,20 +87,23 @@ public class JschSftpClient {
             JSch.setConfig("kex", keyExchangeProtocols);
         }
     }
+    public String getJSchPubkeyAcceptedAlgorithms() {
+        return JSch.getConfig("PubkeyAcceptedAlgorithms");
+    }
 
-    public void configureIdentity(String name, byte[] prvKey, byte[] pubKey, byte[] passphrase) throws JSchException {
+    public void configureJSchIdentity(String name, byte[] prvKey, byte[] pubKey, byte[] passphrase) throws JSchException {
         jsch.addIdentity(name, prvKey, pubKey, passphrase);
     }
 
-    public void configureIdentity(String prvKey, byte[] passphrase) throws JSchException {
+    public void configureJSchIdentity(String prvKey, byte[] passphrase) throws JSchException {
         jsch.addIdentity(prvKey, passphrase);
     }
 
-    public void configureKnownHost(String sftpConfig) throws JSchException {
+    public void configureJSchKnownHost(String sftpConfig) throws JSchException {
         jsch.setKnownHosts(sftpConfig);
     }
 
-    public void configureKnownHost(InputStream is) throws JSchException {
+    public void configureJSchKnownHost(InputStream is) throws JSchException {
         jsch.setKnownHosts(is);
     }
 

@@ -40,7 +40,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
 import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Proxy;
 import com.jcraft.jsch.Session;
@@ -215,7 +214,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     //todo разобрать логику и вынести в SftpGateway
     protected Session createSession(final RemoteFileConfiguration configuration) throws JSchException {
-        final JSch jsch = jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
+        jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
@@ -237,13 +236,13 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 LOG.debug("Using OpenSSH certificate for authentication");
                 try {
                     byte[] keyData = Files.readAllBytes(Paths.get(sftpConfig.getPrivateKeyFile()));
-                    jschClient.configureIdentity(sftpConfig.getPrivateKeyFile(), keyData, certData, passphrase);
+                    jschClient.configureJSchIdentity(sftpConfig.getPrivateKeyFile(), keyData, certData, passphrase);
                 } catch (IOException e) {
                     throw new JSchException("Cannot read private key file: " + sftpConfig.getPrivateKeyFile(), e);
                 }
             } else {
                 // No explicit cert — JSch auto-discovers <key>-cert.pub if it exists
-                jschClient.configureIdentity(sftpConfig.getPrivateKeyFile(), passphrase);
+                jschClient.configureJSchIdentity(sftpConfig.getPrivateKeyFile(), passphrase);
             }
         }
 
@@ -253,7 +252,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             if (isNotEmpty(sftpConfig.getPrivateKeyPassphrase())) {
                 passphrase = sftpConfig.getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
             }
-            jschClient.configureIdentity("ID", sftpConfig.getPrivateKey(), certData, passphrase);
+            jschClient.configureJSchIdentity("ID", sftpConfig.getPrivateKey(), certData, passphrase);
         }
 
         if (sftpConfig.getPrivateKeyUri() != null) {
@@ -267,7 +266,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                         sftpConfig.getPrivateKeyUri());
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 IOHelper.copyAndCloseInput(is, bos);
-                jschClient.configureIdentity("ID", bos.toByteArray(), certData, passphrase);
+                jschClient.configureJSchIdentity("ID", bos.toByteArray(), certData, passphrase);
             } catch (IOException e) {
                 throw new JSchException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
             }
@@ -283,7 +282,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 sb.append(Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded())).append("\n");
                 sb.append("-----END PRIVATE KEY-----").append("\n");
 
-                jschClient.configureIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), certData, null);
+                jschClient.configureJSchIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), certData, null);
             } else {
                 LOG.warn("PrivateKey in the KeyPair must be filled");
             }
@@ -291,7 +290,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         if (isNotEmpty(sftpConfig.getKnownHostsFile())) {
             LOG.debug("Using knownhosts file: {}", sftpConfig.getKnownHostsFile());
-            jschClient.configureKnownHost(sftpConfig.getKnownHostsFile());
+            jschClient.configureJSchKnownHost(sftpConfig.getKnownHostsFile());
         }
 
         if (isNotEmpty(sftpConfig.getKnownHostsUri())) {
@@ -299,7 +298,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             try {
                 InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
                         sftpConfig.getKnownHostsUri());
-                jschClient.configureKnownHost(is);
+                jschClient.configureJSchKnownHost(is);
             } catch (IOException e) {
                 throw new JSchException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
             }
@@ -307,7 +306,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         if (sftpConfig.getKnownHosts() != null) {
             LOG.debug("Using known hosts information from byte array");
-            jschClient.configureKnownHost(new ByteArrayInputStream(sftpConfig.getKnownHosts()));
+            jschClient.configureJSchKnownHost(new ByteArrayInputStream(sftpConfig.getKnownHosts()));
         }
 
         String knownHostsFile = sftpConfig.getKnownHostsFile();
@@ -317,7 +316,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
         if (ObjectHelper.isNotEmpty(knownHostsFile)) {
             LOG.debug("Using known hosts information from file: {}", knownHostsFile);
-            jschClient.configureKnownHost(knownHostsFile);
+            jschClient.configureJSchKnownHost(knownHostsFile);
         }
 
         final Session session = jschClient.createSession(configuration);
@@ -365,7 +364,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         if (sftpConfig.getPublicKeyAcceptedAlgorithms() == null) {
             String certKeyType = detectCertKeyType(certData);
             if (certKeyType != null) {
-                String defaults = JSch.getConfig("PubkeyAcceptedAlgorithms");
+                String defaults = jschClient.getJSchPubkeyAcceptedAlgorithms();
                 if (defaults != null && !defaults.contains(certKeyType)) {
                     session.setConfig("PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
                     LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", certKeyType);
