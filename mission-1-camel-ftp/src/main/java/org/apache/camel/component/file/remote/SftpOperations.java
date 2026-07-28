@@ -71,6 +71,7 @@ import org.apache.camel.util.StopWatch;
 import org.apache.camel.util.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import static org.apache.camel.util.ObjectHelper.isNotEmpty;
 
 /**
@@ -162,7 +163,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             if (channel == null || !channel.isConnected()) {
 
-                jschClient.initSession(createSession(payload.configuration),endpoint.getConfiguration().getConnectTimeout());
+                jschClient.initSession(createSession(payload.configuration), endpoint.getConfiguration().getConnectTimeout());
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
                 channel = jschClient.openChannel();
@@ -194,7 +195,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
 
-
     private void configureBulkRequests() {
         try {
             tryConfigureBulkRequests();
@@ -219,7 +219,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
-        jschClient.setJSchGlobalCiphersAndKex(sftpConfig.getCiphers(),sftpConfig.getKeyExchangeProtocols());
+        jschClient.setJSchGlobalCiphersAndKex(sftpConfig.getCiphers(), sftpConfig.getKeyExchangeProtocols());
 
         // Resolve certificate bytes once — used for both identity loading and key type detection
         byte[] certData = resolveCertificateBytes(sftpConfig);
@@ -291,7 +291,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         if (isNotEmpty(sftpConfig.getKnownHostsFile())) {
             LOG.debug("Using knownhosts file: {}", sftpConfig.getKnownHostsFile());
-            jsch.setKnownHosts(sftpConfig.getKnownHostsFile());
+            jschClient.configureKnownHost(sftpConfig.getKnownHostsFile());
         }
 
         if (isNotEmpty(sftpConfig.getKnownHostsUri())) {
@@ -299,7 +299,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             try {
                 InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
                         sftpConfig.getKnownHostsUri());
-                jsch.setKnownHosts(is);
+                jschClient.configureKnownHost(is);
             } catch (IOException e) {
                 throw new JSchException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
             }
@@ -307,7 +307,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         if (sftpConfig.getKnownHosts() != null) {
             LOG.debug("Using known hosts information from byte array");
-            jsch.setKnownHosts(new ByteArrayInputStream(sftpConfig.getKnownHosts()));
+            jschClient.configureKnownHost(new ByteArrayInputStream(sftpConfig.getKnownHosts()));
         }
 
         String knownHostsFile = sftpConfig.getKnownHostsFile();
@@ -317,7 +317,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
         if (ObjectHelper.isNotEmpty(knownHostsFile)) {
             LOG.debug("Using known hosts information from file: {}", knownHostsFile);
-            jsch.setKnownHosts(knownHostsFile);
+            jschClient.configureKnownHost(knownHostsFile);
         }
 
         final Session session = jsch.getSession(configuration.getUsername(), configuration.getHost(), configuration.getPort());
@@ -425,7 +425,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 if (configuration.getPassword() == null) {
                     return new String[0];
                 } else {
-                    return new String[] { configuration.getPassword() };
+                    return new String[]{configuration.getPassword()};
                 }
             }
 
@@ -468,8 +468,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         return session;
     }
-
-
 
 
     /**
@@ -518,12 +516,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         if (space > 0) {
             String keyType = certLine.substring(0, space);
             if (
-            // ssh key type format for rfc until draft 03
-            // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-03.html
-            keyType.endsWith("-cert-v01@openssh.com") ||
-            // ssh key type format for rfc from draft 04
-            // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-04.html
-                    keyType.endsWith("-cert")) {
+                // ssh key type format for rfc until draft 03
+                // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-03.html
+                    keyType.endsWith("-cert-v01@openssh.com") ||
+                            // ssh key type format for rfc from draft 04
+                            // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-04.html
+                            keyType.endsWith("-cert")) {
 
                 return keyType;
             }
@@ -556,7 +554,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
 
-
     @Override
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
@@ -571,7 +568,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             lock.unlock();
         }
     }
-
 
 
     private void reconnectIfNecessary(Exchange exchange) {
@@ -1139,7 +1135,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             // Do an explicit test for a null body and decide what to do
             if (endpoint.isAllowNullBody()) {
                 LOG.trace("Writing empty file.");
-                is = new ByteArrayInputStream(new byte[] {});
+                is = new ByteArrayInputStream(new byte[]{});
             } else {
                 throw new GenericFileOperationFailedException("Cannot write null body to file: " + name);
             }
@@ -1290,7 +1286,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             lock.unlock();
         }
     }
-
 
 
     @Override

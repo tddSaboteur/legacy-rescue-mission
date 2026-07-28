@@ -9,6 +9,8 @@ import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.InputStream;
+
 public class JschSftpClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(JschSftpClient.class);
@@ -16,8 +18,9 @@ public class JschSftpClient {
     private JSch jsch;
 
     public ChannelSftp openChannel() throws JSchException {
-       return (ChannelSftp) session.openChannel("sftp");
+        return (ChannelSftp) session.openChannel("sftp");
     }
+
     public boolean isConnectedSession() {
         return session != null && session.isConnected();
     }
@@ -27,6 +30,7 @@ public class JschSftpClient {
             session.disconnect();
         }
     }
+
     public void forceDisconnectSession() {
         if (session != null) {
             session.disconnect();
@@ -90,6 +94,13 @@ public class JschSftpClient {
         jsch.addIdentity(prvKey, passphrase);
     }
 
+    public void configureKnownHost(String sftpConfig) throws JSchException {
+        jsch.setKnownHosts(sftpConfig);
+    }
+
+    public void configureKnownHost(InputStream is) throws JSchException {
+        jsch.setKnownHosts(is);
+    }
 
     private static final class JSchLogger implements com.jcraft.jsch.Logger {
 
