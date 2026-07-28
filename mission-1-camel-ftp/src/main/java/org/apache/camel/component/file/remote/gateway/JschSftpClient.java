@@ -63,6 +63,11 @@ public class JschSftpClient {
         return jsch.getSession(configuration.getUsername(), configuration.getHost(), configuration.getPort());
     }
 
+    //todo сейчас в метод нужно передавать сессию иначе сломаем многопоточку, в дальнейшем уберем в Билдер или фабрику
+    public void setSessionConfig(Session session, String key, String value) {
+        session.setConfig(key,value);
+    }
+
 
 
 

@@ -323,7 +323,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         if (isNotEmpty(sftpConfig.getStrictHostKeyChecking())) {
             LOG.debug("Using StrictHostKeyChecking: {}", sftpConfig.getStrictHostKeyChecking());
-            session.setConfig("StrictHostKeyChecking", sftpConfig.getStrictHostKeyChecking());
+            jschClient.setSessionConfig(session,"StrictHostKeyChecking", sftpConfig.getStrictHostKeyChecking());
         }
 
         session.setServerAliveInterval(sftpConfig.getServerAliveInterval());
@@ -332,27 +332,27 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         // compression
         if (sftpConfig.getCompression() > 0) {
             LOG.debug("Using compression: {}", sftpConfig.getCompression());
-            session.setConfig("compression.s2c", "zlib@openssh.com,zlib,none");
-            session.setConfig("compression.c2s", "zlib@openssh.com,zlib,none");
-            session.setConfig("compression_level", Integer.toString(sftpConfig.getCompression()));
+            jschClient.setSessionConfig(session,"compression.s2c", "zlib@openssh.com,zlib,none");
+            jschClient.setSessionConfig(session,"compression.c2s", "zlib@openssh.com,zlib,none");
+            jschClient.setSessionConfig(session,"compression_level", Integer.toString(sftpConfig.getCompression()));
         }
 
         // set the PreferredAuthentications
         if (sftpConfig.getPreferredAuthentications() != null) {
             LOG.debug("Using PreferredAuthentications: {}", sftpConfig.getPreferredAuthentications());
-            session.setConfig("PreferredAuthentications", sftpConfig.getPreferredAuthentications());
+            jschClient.setSessionConfig(session,"PreferredAuthentications", sftpConfig.getPreferredAuthentications());
         }
 
         // set the ServerHostKeys
         if (sftpConfig.getServerHostKeys() != null) {
             LOG.debug("Using ServerHostKeys: {}", sftpConfig.getServerHostKeys());
-            session.setConfig("server_host_key", sftpConfig.getServerHostKeys());
+            jschClient.setSessionConfig(session,"server_host_key", sftpConfig.getServerHostKeys());
         }
 
         // set the PublicKeyAcceptedAlgorithms
         if (sftpConfig.getPublicKeyAcceptedAlgorithms() != null) {
             LOG.debug("Using PublicKeyAcceptedAlgorithms: {}", sftpConfig.getPublicKeyAcceptedAlgorithms());
-            session.setConfig("PubkeyAcceptedAlgorithms", sftpConfig.getPublicKeyAcceptedAlgorithms());
+            jschClient.setSessionConfig(session,"PubkeyAcceptedAlgorithms", sftpConfig.getPublicKeyAcceptedAlgorithms());
         }
 
         // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
@@ -366,7 +366,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             if (certKeyType != null) {
                 String defaults = jschClient.getJSchPubkeyAcceptedAlgorithms();
                 if (defaults != null && !defaults.contains(certKeyType)) {
-                    session.setConfig("PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
+                    jschClient.setSessionConfig(session,"PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
                     LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", certKeyType);
                 }
             }
@@ -375,7 +375,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         // set the CASignatureAlgorithms
         if (sftpConfig.getCaSignatureAlgorithms() != null) {
             LOG.debug("Using CASignatureAlgorithms: {}", sftpConfig.getCaSignatureAlgorithms());
-            session.setConfig("ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
+            jschClient.setSessionConfig(session,"ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
         }
 
         // set user information
