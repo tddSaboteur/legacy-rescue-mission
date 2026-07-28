@@ -5,15 +5,12 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Hashtable;
+public class JchSftpClient {
 
-public class SftpGateway {
-
-    private static final Logger LOG = LoggerFactory.getLogger(SftpGateway.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JchSftpClient.class);
     private Session session;
 
     public ChannelSftp openChannel() throws JSchException {

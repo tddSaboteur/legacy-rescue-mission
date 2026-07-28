@@ -33,7 +33,6 @@ import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.time.Duration;
 import java.util.Base64;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.locks.Lock;
@@ -51,7 +50,6 @@ import com.jcraft.jsch.UIKeyboardInteractive;
 import com.jcraft.jsch.UserInfo;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadException;
-import org.apache.camel.LoggingLevel;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.file.FileComponent;
 import org.apache.camel.component.file.GenericFile;
@@ -59,7 +57,7 @@ import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
-import org.apache.camel.component.file.remote.gateway.SftpGateway;
+import org.apache.camel.component.file.remote.gateway.JchSftpClient;
 import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.task.BlockingTask;
@@ -89,7 +87,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private SftpEndpoint endpoint;
     private ChannelSftp channel;
     private final Lock lock = new ReentrantLock();
-    private SftpGateway gateway = new SftpGateway();
+    private JchSftpClient gateway = new JchSftpClient();
 
     private static class TaskPayload {
         final RemoteFileConfiguration configuration;
