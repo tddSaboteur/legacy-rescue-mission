@@ -5,6 +5,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.file.remote.RemoteFileConfiguration;
 import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,20 +25,17 @@ public class JschSftpClient {
     public boolean isConnectedSession() {
         return session != null && session.isConnected();
     }
-
     public void disconnectSession() {
         if (session != null && session.isConnected()) {
             session.disconnect();
         }
     }
-
     public void forceDisconnectSession() {
         if (session != null) {
             session.disconnect();
         }
         session = null;
     }
-
     public boolean sessionSendKeepAliveMsg() {
         try {
             session.sendKeepAliveMsg();
@@ -47,7 +45,6 @@ public class JschSftpClient {
             return false;
         }
     }
-
     public void initSession(Session session, int connectTimeout) throws JSchException {
         if (session == null || !session.isConnected()) {
             LOG.trace("Session isn't connected, trying to recreate and connect.");
@@ -63,6 +60,12 @@ public class JschSftpClient {
             }
         }
     }
+    public Session createSession(RemoteFileConfiguration configuration) throws JSchException {
+        return jsch.getSession(configuration.getUsername(), configuration.getHost(), configuration.getPort());
+    }
+
+
+
 
     public JSch createJsch(LoggingLevel jschLoggingLevel) {
         JSch.setLogger(new JSchLogger(jschLoggingLevel));
@@ -101,6 +104,8 @@ public class JschSftpClient {
     public void configureKnownHost(InputStream is) throws JSchException {
         jsch.setKnownHosts(is);
     }
+
+
 
     private static final class JSchLogger implements com.jcraft.jsch.Logger {
 

@@ -320,7 +320,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             jschClient.configureKnownHost(knownHostsFile);
         }
 
-        final Session session = jsch.getSession(configuration.getUsername(), configuration.getHost(), configuration.getPort());
+        final Session session = jschClient.createSession(configuration);
 
         if (isNotEmpty(sftpConfig.getStrictHostKeyChecking())) {
             LOG.debug("Using StrictHostKeyChecking: {}", sftpConfig.getStrictHostKeyChecking());
@@ -468,6 +468,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         return session;
     }
+
 
 
     /**
