@@ -212,7 +212,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
     }
 
-    //todo разобрать логику и вынести в SftpGateway
     protected Session createSession(final RemoteFileConfiguration configuration) throws JSchException {
         jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
 
@@ -376,9 +375,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             LOG.debug("Using CASignatureAlgorithms: {}", sftpConfig.getCaSignatureAlgorithms());
             jschClient.setSessionConfig(session,"ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
         }
-
-        // set user information
-        session.setUserInfo(new ExtendedUserInfo() {
+        ExtendedUserInfo userInfo =  new ExtendedUserInfo() {
 
             private final CamelLogger messageLogger
                     = new CamelLogger(LOG, ((SftpConfiguration) configuration).getServerMessageLoggingLevel());
@@ -427,12 +424,14 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 }
             }
 
-        });
+        };
+        // set user information
+        jschClient.sesionSetUserInfo(session, userInfo);
 
         // set the SO_TIMEOUT for the time after the connect phase
         if (sftpConfig.getServerAliveInterval() == 0) {
             if (configuration.getSoTimeout() > 0) {
-                session.setTimeout(configuration.getSoTimeout());
+                jschClient.setSessionTimeout(session, configuration.getSoTimeout());
             }
         } else {
             LOG.debug(
@@ -441,11 +440,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         // set proxy if configured
         if (proxy != null) {
-            session.setProxy(proxy);
+            jschClient.sesionSetProxy(session,proxy);
         }
 
         if (isNotEmpty(sftpConfig.getBindAddress())) {
-            session.setSocketFactory(new SocketFactory() {
+
+            SocketFactory socketFactory =new SocketFactory() {
 
                 @Override
                 public OutputStream getOutputStream(Socket socket) throws IOException {
@@ -461,12 +461,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 public Socket createSocket(String host, int port) throws IOException {
                     return createSocketUtil(host, port, sftpConfig.getBindAddress(), session.getTimeout());
                 }
-            });
+            };
+            jschClient.setSessionSocketFactory(session, socketFactory);
         }
 
         return session;
     }
-
 
 
 

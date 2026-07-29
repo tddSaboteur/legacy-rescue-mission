@@ -1,12 +1,10 @@
 package org.apache.camel.component.file.remote.gateway;
 
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
+import com.jcraft.jsch.*;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.file.remote.RemoteFileConfiguration;
-import org.apache.camel.component.file.remote.SftpConfiguration;
+
+import org.apache.camel.component.file.remote.SftpOperations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,15 +74,27 @@ public class JschSftpClient {
         session.setServerAliveInterval(interval);
         session.setServerAliveCountMax(count);
     }
+    public void sesionSetUserInfo(Session session, SftpOperations.ExtendedUserInfo userInfo) {
+        session.setUserInfo(userInfo);
+    }
+    public void setSessionTimeout(Session session, int timeout) throws JSchException {
+        session.setTimeout(timeout);
+    }
+    public void sesionSetProxy(Session session, Proxy proxy) {
+        session.setProxy(proxy);
+    }
+    public void setSessionSocketFactory(Session session, SocketFactory socketFactory) {
+        session.setSocketFactory(socketFactory);
+    }
+    //todo end
 
 
 
 
 
-    public JSch createJsch(LoggingLevel jschLoggingLevel) {
+    public void createJsch(LoggingLevel jschLoggingLevel) {
         JSch.setLogger(new JSchLogger(jschLoggingLevel));
         jsch = new JSch();
-        return jsch;
     }
 
     public void setJSchGlobalCiphersAndKex(String ciphers, String keyExchangeProtocols) {
