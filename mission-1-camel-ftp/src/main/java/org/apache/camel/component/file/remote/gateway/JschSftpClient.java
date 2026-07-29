@@ -5,7 +5,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.file.remote.RemoteFileConfiguration;
 
-import org.apache.camel.component.file.remote.SftpOperations;
+import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.util.IOHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +80,8 @@ public class JschSftpClient {
         session.setServerAliveInterval(interval);
         session.setServerAliveCountMax(count);
     }
-    public void sesionSetUserInfo(Session session, SftpOperations.ExtendedUserInfo userInfo) {
+    public void configSesionUserInfo(Session session, CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
+        ExtendedUserInfo userInfo = createUserInfo(messageLogger, password, isAutoCreateKnownHostsFile);
         session.setUserInfo(userInfo);
     }
     public void setSessionTimeout(Session session, int timeout) throws JSchException {
@@ -95,7 +96,54 @@ public class JschSftpClient {
     //todo end
 
 
+    private ExtendedUserInfo createUserInfo(CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
+        return new ExtendedUserInfo() {
+            public String getPassphrase() {
+                return null;
+            }
 
+            public String getPassword() {
+                return password;
+            }
+
+            public boolean promptPassword(String s) {
+                return true;
+            }
+
+            public boolean promptPassphrase(String s) {
+                return true;
+            }
+
+            public boolean promptYesNo(String s) {
+                // are we prompted because the known host files does not exist, and asked whether to auto-create the file
+                boolean knownHostFile = s != null && s.endsWith("Are you sure you want to create it?");
+                if (knownHostFile && isAutoCreateKnownHostsFile) {
+                    LOG.warn("Server asks for confirmation (yes|no): {}. Camel will answer yes.", s);
+                    return true;
+                } else {
+                    LOG.warn("Server asks for confirmation (yes|no): {}. Camel will answer no.", s);
+                    // Return 'false' indicating modification of the hosts file is
+                    // disabled.
+                    return false;
+                }
+            }
+
+            public void showMessage(String s) {
+                messageLogger.log("FTP Server: " + s);
+            }
+
+            public String[] promptKeyboardInteractive(
+                    String destination, String name, String instruction, String[] prompt, boolean[] echo) {
+                // must return an empty array if password is null
+                if (password == null) {
+                    return new String[0];
+                } else {
+                    return new String[]{password};
+                }
+            }
+
+        };
+    }
 
     private SocketFactory createSocketFactory(int timeout, String bindAddress) {
         SocketFactory socketFactory =new SocketFactory() {
@@ -168,6 +216,11 @@ public class JschSftpClient {
         }
         return socket;
     }
+
+
+    public interface ExtendedUserInfo extends UserInfo, UIKeyboardInteractive {
+    }
+
 
 
 

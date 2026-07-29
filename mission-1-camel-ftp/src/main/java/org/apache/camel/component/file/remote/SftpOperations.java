@@ -42,8 +42,6 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Proxy;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
-import com.jcraft.jsch.UIKeyboardInteractive;
-import com.jcraft.jsch.UserInfo;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadException;
 import org.apache.camel.component.file.FileComponent;
@@ -104,8 +102,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     /**
      * Extended user info which supports interactive keyboard mode, by entering the password.
      */
-    public interface ExtendedUserInfo extends UserInfo, UIKeyboardInteractive {
-    }
 
     @Override
     public void setEndpoint(GenericFileEndpoint<SftpRemoteFile> endpoint) {
@@ -371,58 +367,14 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             LOG.debug("Using CASignatureAlgorithms: {}", sftpConfig.getCaSignatureAlgorithms());
             jschClient.setSessionConfig(session,"ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
         }
-        ExtendedUserInfo userInfo =  new ExtendedUserInfo() {
 
-            private final CamelLogger messageLogger
-                    = new CamelLogger(LOG, ((SftpConfiguration) configuration).getServerMessageLoggingLevel());
 
-            public String getPassphrase() {
-                return null;
-            }
-
-            public String getPassword() {
-                return configuration.getPassword();
-            }
-
-            public boolean promptPassword(String s) {
-                return true;
-            }
-
-            public boolean promptPassphrase(String s) {
-                return true;
-            }
-
-            public boolean promptYesNo(String s) {
-                // are we prompted because the known host files does not exist, and asked whether to auto-create the file
-                boolean knownHostFile = s != null && s.endsWith("Are you sure you want to create it?");
-                if (knownHostFile && ((SftpConfiguration) configuration).isAutoCreateKnownHostsFile()) {
-                    LOG.warn("Server asks for confirmation (yes|no): {}. Camel will answer yes.", s);
-                    return true;
-                } else {
-                    LOG.warn("Server asks for confirmation (yes|no): {}. Camel will answer no.", s);
-                    // Return 'false' indicating modification of the hosts file is
-                    // disabled.
-                    return false;
-                }
-            }
-
-            public void showMessage(String s) {
-                messageLogger.log("FTP Server: " + s);
-            }
-
-            public String[] promptKeyboardInteractive(
-                    String destination, String name, String instruction, String[] prompt, boolean[] echo) {
-                // must return an empty array if password is null
-                if (configuration.getPassword() == null) {
-                    return new String[0];
-                } else {
-                    return new String[]{configuration.getPassword()};
-                }
-            }
-
-        };
         // set user information
-        jschClient.sesionSetUserInfo(session, userInfo);
+        jschClient.configSesionUserInfo(session,
+                new CamelLogger(LOG, ((SftpConfiguration) configuration).getServerMessageLoggingLevel()),
+                configuration.getPassword(),
+                ((SftpConfiguration) configuration).isAutoCreateKnownHostsFile()
+        );
 
         // set the SO_TIMEOUT for the time after the connect phase
         if (sftpConfig.getServerAliveInterval() == 0) {
