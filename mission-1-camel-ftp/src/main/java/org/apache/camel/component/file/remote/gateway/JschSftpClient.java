@@ -21,6 +21,14 @@ public class JschSftpClient {
     private static final Logger LOG = LoggerFactory.getLogger(JschSftpClient.class);
     private Session session;
     private JSch jsch;
+    private Proxy proxy;
+
+    public JschSftpClient() {
+    }
+    //todo Лучше вынести в параметры сесии
+    public JschSftpClient(Proxy proxy) {
+        this.proxy = proxy;
+    }
 
     public ChannelSftp openChannel() throws JSchException {
         return (ChannelSftp) session.openChannel("sftp");
@@ -87,8 +95,10 @@ public class JschSftpClient {
     public void setSessionTimeout(Session session, int timeout) throws JSchException {
         session.setTimeout(timeout);
     }
-    public void sesionSetProxy(Session session, Proxy proxy) {
-        session.setProxy(proxy);
+    public void sesionSetProxy(Session session) {
+        if (proxy != null) {
+            session.setProxy(proxy);
+        }
     }
     public void configureSessionSocketFactory(Session session, String bindAddress) {
         session.setSocketFactory(createSocketFactory(session.getTimeout(), bindAddress));

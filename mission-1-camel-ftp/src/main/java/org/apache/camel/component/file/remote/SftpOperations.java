@@ -77,11 +77,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private static final Pattern UP_DIR_PATTERN = Pattern.compile("/[^/]+");
     private static final int OK_STATUS = 0;
     private static final String OK_MESSAGE = "OK";
-    private Proxy proxy;
     private SftpEndpoint endpoint;
     private ChannelSftp channel;
     private final Lock lock = new ReentrantLock();
-    private JschSftpClient jschClient = new JschSftpClient();
+    private JschSftpClient jschClient;
 
     private static class TaskPayload {
         final RemoteFileConfiguration configuration;
@@ -93,10 +92,21 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
     public SftpOperations() {
+        this(new JschSftpClient());
     }
 
+    /**
+     * @deprecated Используйте {@link #SftpOperations(JschSftpClient)} для явного
+     * внедрения зависимостей. Этот конструктор оставлен только для обратной
+     * совместимости и legacy-кода.
+     */
+    @Deprecated
     public SftpOperations(Proxy proxy) {
-        this.proxy = proxy;
+        this.jschClient = new JschSftpClient(proxy);
+    }
+
+    public SftpOperations(JschSftpClient jschClient) {
+        this.jschClient = jschClient;
     }
 
     /**
@@ -314,35 +324,35 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         if (isNotEmpty(sftpConfig.getStrictHostKeyChecking())) {
             LOG.debug("Using StrictHostKeyChecking: {}", sftpConfig.getStrictHostKeyChecking());
-            jschClient.setSessionConfig(session,"StrictHostKeyChecking", sftpConfig.getStrictHostKeyChecking());
+            jschClient.setSessionConfig(session, "StrictHostKeyChecking", sftpConfig.getStrictHostKeyChecking());
         }
 
-        jschClient.configAliveSession(session, sftpConfig.getServerAliveInterval(),sftpConfig.getServerAliveCountMax());
+        jschClient.configAliveSession(session, sftpConfig.getServerAliveInterval(), sftpConfig.getServerAliveCountMax());
 
         // compression
         if (sftpConfig.getCompression() > 0) {
             LOG.debug("Using compression: {}", sftpConfig.getCompression());
-            jschClient.setSessionConfig(session,"compression.s2c", "zlib@openssh.com,zlib,none");
-            jschClient.setSessionConfig(session,"compression.c2s", "zlib@openssh.com,zlib,none");
-            jschClient.setSessionConfig(session,"compression_level", Integer.toString(sftpConfig.getCompression()));
+            jschClient.setSessionConfig(session, "compression.s2c", "zlib@openssh.com,zlib,none");
+            jschClient.setSessionConfig(session, "compression.c2s", "zlib@openssh.com,zlib,none");
+            jschClient.setSessionConfig(session, "compression_level", Integer.toString(sftpConfig.getCompression()));
         }
 
         // set the PreferredAuthentications
         if (sftpConfig.getPreferredAuthentications() != null) {
             LOG.debug("Using PreferredAuthentications: {}", sftpConfig.getPreferredAuthentications());
-            jschClient.setSessionConfig(session,"PreferredAuthentications", sftpConfig.getPreferredAuthentications());
+            jschClient.setSessionConfig(session, "PreferredAuthentications", sftpConfig.getPreferredAuthentications());
         }
 
         // set the ServerHostKeys
         if (sftpConfig.getServerHostKeys() != null) {
             LOG.debug("Using ServerHostKeys: {}", sftpConfig.getServerHostKeys());
-            jschClient.setSessionConfig(session,"server_host_key", sftpConfig.getServerHostKeys());
+            jschClient.setSessionConfig(session, "server_host_key", sftpConfig.getServerHostKeys());
         }
 
         // set the PublicKeyAcceptedAlgorithms
         if (sftpConfig.getPublicKeyAcceptedAlgorithms() != null) {
             LOG.debug("Using PublicKeyAcceptedAlgorithms: {}", sftpConfig.getPublicKeyAcceptedAlgorithms());
-            jschClient.setSessionConfig(session,"PubkeyAcceptedAlgorithms", sftpConfig.getPublicKeyAcceptedAlgorithms());
+            jschClient.setSessionConfig(session, "PubkeyAcceptedAlgorithms", sftpConfig.getPublicKeyAcceptedAlgorithms());
         }
 
         // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
@@ -356,7 +366,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             if (certKeyType != null) {
                 String defaults = jschClient.getJSchPubkeyAcceptedAlgorithms();
                 if (defaults != null && !defaults.contains(certKeyType)) {
-                    jschClient.setSessionConfig(session,"PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
+                    jschClient.setSessionConfig(session, "PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
                     LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", certKeyType);
                 }
             }
@@ -365,7 +375,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         // set the CASignatureAlgorithms
         if (sftpConfig.getCaSignatureAlgorithms() != null) {
             LOG.debug("Using CASignatureAlgorithms: {}", sftpConfig.getCaSignatureAlgorithms());
-            jschClient.setSessionConfig(session,"ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
+            jschClient.setSessionConfig(session, "ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
         }
 
 
@@ -387,9 +397,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
 
         // set proxy if configured
-        if (proxy != null) {
-            jschClient.sesionSetProxy(session,proxy);
-        }
+        jschClient.sesionSetProxy(session);
+
 
         if (isNotEmpty(sftpConfig.getBindAddress())) {
 
@@ -398,8 +407,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         return session;
     }
-
-
 
 
     /**
@@ -1225,7 +1232,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         // is not implemented
         return true;
     }
-
 
 
     /**
