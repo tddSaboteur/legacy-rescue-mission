@@ -160,27 +160,26 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         if (LOG.isTraceEnabled()) {
             LOG.trace("Reconnect attempt to {}", payload.configuration.remoteServerInformation());
         }
-        ChannelSftp channel = jschClient.getChannel();
         try {
-            if (channel == null || !channel.isConnected()) {
+            if (jschClient.isConnectChannel()) {
 
                 jschClient.initSession(createSession(payload.configuration), endpoint.getConfiguration().getConnectTimeout());
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
-                channel = jschClient.openChannel();
-                jschClient.setChannel(channel);
+                jschClient.openChannel();
 
                 if (endpoint.getConfiguration().getFilenameEncoding() != null) {
                     Charset ch = Charset.forName(endpoint.getConfiguration().getFilenameEncoding());
                     LOG.trace("Using filename encoding: {}", ch);
-                    channel.setFilenameEncoding(ch);
+                    jschClient.channelSetFilenameEncoding(ch);
                 }
                 if (endpoint.getConfiguration().getConnectTimeout() > 0) {
                     LOG.trace("Connecting use connectTimeout: {} ...", endpoint.getConfiguration().getConnectTimeout());
-                    channel.connect(endpoint.getConfiguration().getConnectTimeout());
+                    var timeout = endpoint.getConfiguration().getConnectTimeout();
+                    jschClient.channelSetTimeout(timeout);
                 } else {
                     LOG.trace("Connecting ...");
-                    channel.connect();
+                    jschClient.channelConnect();
                 }
 
                 if (LOG.isDebugEnabled()) {

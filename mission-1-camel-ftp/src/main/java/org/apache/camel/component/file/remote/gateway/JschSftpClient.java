@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.charset.Charset;
 
 public class JschSftpClient {
 
@@ -32,8 +33,18 @@ public class JschSftpClient {
         this.proxy = proxy;
     }
 
+    public void channelConnect() throws JSchException {
+        channel.connect();
+    }
     public ChannelSftp openChannel() throws JSchException {
-        return (ChannelSftp) session.openChannel("sftp");
+        channel = (ChannelSftp) session.openChannel("sftp");
+        return channel;
+    }
+    public void channelSetFilenameEncoding(Charset ch) {
+        channel.setFilenameEncoding(ch);
+    }
+    public void channelSetTimeout(int timeout) throws JSchException {
+        channel.connect(timeout);
     }
 
     public ChannelSftp getChannel() {
@@ -43,6 +54,12 @@ public class JschSftpClient {
     public void setChannel(ChannelSftp channel) {
         this.channel = channel;
     }
+
+    public boolean isConnectChannel() {
+        return channel == null || !channel.isConnected();
+    }
+
+
 
     public boolean isConnectedSession() {
         return session != null && session.isConnected();
