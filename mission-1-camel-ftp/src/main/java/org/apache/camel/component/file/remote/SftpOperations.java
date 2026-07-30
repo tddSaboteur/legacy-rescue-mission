@@ -161,7 +161,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             LOG.trace("Reconnect attempt to {}", payload.configuration.remoteServerInformation());
         }
         try {
-            if (jschClient.isConnectChannel()) {
+            if (!jschClient.isConnectedChannel()) {
 
                 jschClient.initSession(createSession(payload.configuration), endpoint.getConfiguration().getConnectTimeout());
 
@@ -206,13 +206,11 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     private void tryConfigureBulkRequests() throws JSchException {
         Integer bulkRequests = endpoint.getConfiguration().getBulkRequests();
-        ChannelSftp channel = jschClient.getChannel();
-        if (bulkRequests != null) {
-            LOG.trace("configuring channel to use up to {} bulk request(s)", bulkRequests);
 
-            channel.setBulkRequests(bulkRequests);
-        }
+        jschClient.chanenlSetBulkRequsets(bulkRequests);
     }
+
+
 
     protected Session createSession(final RemoteFileConfiguration configuration) throws JSchException {
         jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
@@ -472,9 +470,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public boolean isConnected() throws GenericFileOperationFailedException {
         lock.lock();
-        ChannelSftp channel = jschClient.getChannel();
         try {
-            return jschClient.isConnectedSession() && channel != null && channel.isConnected();
+            return jschClient.isConnectedSession() && jschClient.isConnectedChannel();
         } finally {
             lock.unlock();
         }
@@ -483,33 +480,26 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void disconnect() throws GenericFileOperationFailedException {
         lock.lock();
-        ChannelSftp channel = jschClient.getChannel();
+
         try {
             jschClient.disconnectSession();
-            if (channel != null && channel.isConnected()) {
-                channel.disconnect();
-            }
+            jschClient.disconnectChannel();
         } finally {
             lock.unlock();
         }
     }
+
+
 
 
     @Override
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
-        ChannelSftp channel = jschClient.getChannel();
-        try {
-            jschClient.forceDisconnectSession();
-            if (channel != null) {
-                channel.disconnect();
-            }
-        } finally {
-            // ensure these
-            channel = null;
-            lock.unlock();
-        }
+        jschClient.channelForceDisconnect();
+        lock.unlock();
     }
+
+
 
 
     private void reconnectIfNecessary(Exchange exchange) {

@@ -33,12 +33,21 @@ public class JschSftpClient {
         this.proxy = proxy;
     }
 
+
+
+    // Методы создания и конфигурирования channel
     public void channelConnect() throws JSchException {
         channel.connect();
     }
-    public ChannelSftp openChannel() throws JSchException {
+    public void chanenlSetBulkRequsets(Integer bulkRequests) throws JSchException {
+        if (bulkRequests != null) {
+            LOG.trace("configuring channel to use up to {} bulk request(s)", bulkRequests);
+
+            channel.setBulkRequests(bulkRequests);
+        }
+    }
+    public void openChannel() throws JSchException {
         channel = (ChannelSftp) session.openChannel("sftp");
-        return channel;
     }
     public void channelSetFilenameEncoding(Charset ch) {
         channel.setFilenameEncoding(ch);
@@ -51,16 +60,36 @@ public class JschSftpClient {
         return channel;
     }
 
-    public void setChannel(ChannelSftp channel) {
-        this.channel = channel;
+    public boolean isConnectedChannel() {
+        return channel != null && channel.isConnected();
     }
 
-    public boolean isConnectChannel() {
-        return channel == null || !channel.isConnected();
+    //управление жизненым циклом channel
+    public void disconnectChannel() {
+        if (isConnectedChannel()) {
+            channel.disconnect();
+        }
+    }
+    public void channelForceDisconnect() {
+        try {
+            forceDisconnectSession();
+            if (channel != null) {
+                channel.disconnect();
+            }
+        } finally {
+            // ensure these
+            channel = null;
+
+        }
+    }
+
+    //методы работы с channel
+    public void channelRm(String name) throws SftpException {
+        channel.rm(name);
     }
 
 
-
+    // методы управления сессиями
     public boolean isConnectedSession() {
         return session != null && session.isConnected();
     }
@@ -261,7 +290,7 @@ public class JschSftpClient {
 
 
 
-
+    //методы JSch
     public void createJsch(LoggingLevel jschLoggingLevel) {
         JSch.setLogger(new JSchLogger(jschLoggingLevel));
         jsch = new JSch();
