@@ -78,7 +78,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private static final int OK_STATUS = 0;
     private static final String OK_MESSAGE = "OK";
     private SftpEndpoint endpoint;
-    private ChannelSftp channel;
+
     private final Lock lock = new ReentrantLock();
     private JschSftpClient jschClient;
 
@@ -160,7 +160,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         if (LOG.isTraceEnabled()) {
             LOG.trace("Reconnect attempt to {}", payload.configuration.remoteServerInformation());
         }
-
+        ChannelSftp channel = jschClient.getChannel();
         try {
             if (channel == null || !channel.isConnected()) {
 
@@ -168,6 +168,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
                 channel = jschClient.openChannel();
+                jschClient.setChannel(channel);
 
                 if (endpoint.getConfiguration().getFilenameEncoding() != null) {
                     Charset ch = Charset.forName(endpoint.getConfiguration().getFilenameEncoding());
@@ -206,7 +207,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     private void tryConfigureBulkRequests() throws JSchException {
         Integer bulkRequests = endpoint.getConfiguration().getBulkRequests();
-
+        ChannelSftp channel = jschClient.getChannel();
         if (bulkRequests != null) {
             LOG.trace("configuring channel to use up to {} bulk request(s)", bulkRequests);
 
@@ -472,6 +473,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public boolean isConnected() throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             return jschClient.isConnectedSession() && channel != null && channel.isConnected();
         } finally {
@@ -482,6 +484,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void disconnect() throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             jschClient.disconnectSession();
             if (channel != null && channel.isConnected()) {
@@ -496,6 +499,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             jschClient.forceDisconnectSession();
             if (channel != null) {
@@ -518,6 +522,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public boolean deleteFile(String name) throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             LOG.debug("Deleting file: {}", name);
             reconnectIfNecessary(null);
@@ -534,6 +539,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public boolean renameFile(String from, String to) throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             LOG.debug("Renaming file: {} to: {}", from, to);
             reconnectIfNecessary(null);
@@ -553,6 +559,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public boolean buildDirectory(String directory, boolean absolute) throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             // must normalize directory first
             directory = endpoint.getConfiguration().normalizePath(directory);
@@ -615,7 +622,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private boolean buildDirectoryChunks(String dirName) throws SftpException {
         final StringBuilder sb = new StringBuilder(dirName.length());
         final String[] dirs = dirName.split("/|\\\\");
-
+        ChannelSftp channel = jschClient.getChannel();
         boolean success = false;
         boolean first = true;
         for (String dir : dirs) {
@@ -653,6 +660,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public String getCurrentDirectory() throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             LOG.trace("getCurrentDirectory()");
             String answer = channel.pwd();
@@ -738,6 +746,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
     private void doChangeDirectory(String path) {
+        ChannelSftp channel = jschClient.getChannel();
         if (path == null || ".".equals(path) || ObjectHelper.isEmpty(path)) {
             return;
         }
@@ -781,6 +790,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public SftpRemoteFile[] listFiles(String path) throws GenericFileOperationFailedException {
         lock.lock();
+        ChannelSftp channel = jschClient.getChannel();
         try {
             LOG.trace("Listing remote files from path {}", path);
             if (ObjectHelper.isEmpty(path)) {
@@ -839,6 +849,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     @SuppressWarnings("unchecked")
     private boolean retrieveFileToStreamInBody(String name, Exchange exchange) throws GenericFileOperationFailedException {
+        ChannelSftp channel = jschClient.getChannel();
         try {
             String currentDir = null;
             GenericFile<ChannelSftp.LsEntry> target
@@ -966,7 +977,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 // directory
                 remoteName = FileUtil.stripPath(name);
             }
-
+            ChannelSftp channel = jschClient.getChannel();
             channel.get(remoteName, os);
 
             // change back to current directory if we changed directory
@@ -1095,6 +1106,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
             final StopWatch watch = new StopWatch();
             LOG.debug("About to store file: {} using stream: {}", targetName, is);
+            ChannelSftp channel = jschClient.getChannel();
             if (endpoint.getFileExist() == GenericFileExist.Append) {
                 LOG.trace("Client appendFile: {}", targetName);
                 channel.put(is, targetName, ChannelSftp.APPEND);
@@ -1136,6 +1148,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         lock.lock();
         ByteArrayInputStream bis = new ByteArrayInputStream(payload.getBytes());
         try {
+            ChannelSftp channel = jschClient.getChannel();
             channel.put(bis, name);
             return true;
         } catch (SftpException e) {
@@ -1163,6 +1176,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             String onlyName = FileUtil.stripPath(name);
 
             try {
+                ChannelSftp channel = jschClient.getChannel();
                 @SuppressWarnings("rawtypes")
                 List files = channel.ls(directory);
                 // can return either null or an empty list depending on FTP servers
@@ -1196,6 +1210,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     protected boolean fastExistsFile(String name) throws GenericFileOperationFailedException {
         LOG.trace("fastExistsFile({})", name);
         try {
+            ChannelSftp channel = jschClient.getChannel();
             @SuppressWarnings("rawtypes")
             List files = channel.ls(name);
             if (files == null) {
@@ -1260,6 +1275,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             // parse to int using 8bit mode
             int permissions = Integer.parseInt(chmodDirectory, 8);
             try {
+                ChannelSftp channel = jschClient.getChannel();
                 channel.chmod(permissions, directory);
             } catch (SftpException e) {
                 throw new GenericFileOperationFailedException("Cannot set permission on directory: " + directory, e);

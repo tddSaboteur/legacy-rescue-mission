@@ -22,9 +22,11 @@ public class JschSftpClient {
     private Session session;
     private JSch jsch;
     private Proxy proxy;
+    private ChannelSftp channel;
 
     public JschSftpClient() {
     }
+
     //todo Лучше вынести в параметры сесии
     public JschSftpClient(Proxy proxy) {
         this.proxy = proxy;
@@ -32,6 +34,14 @@ public class JschSftpClient {
 
     public ChannelSftp openChannel() throws JSchException {
         return (ChannelSftp) session.openChannel("sftp");
+    }
+
+    public ChannelSftp getChannel() {
+        return channel;
+    }
+
+    public void setChannel(ChannelSftp channel) {
+        this.channel = channel;
     }
 
     public boolean isConnectedSession() {
@@ -75,6 +85,7 @@ public class JschSftpClient {
     public Session createSession(RemoteFileConfiguration configuration) throws JSchException {
         return jsch.getSession(configuration.getUsername(), configuration.getHost(), configuration.getPort());
     }
+
 
 
 
