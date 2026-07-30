@@ -16,6 +16,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.util.Vector;
 
 public class JschSftpClient {
 
@@ -33,6 +34,10 @@ public class JschSftpClient {
         this.proxy = proxy;
     }
 
+    //todo временный для доступа к Channel
+    public ChannelSftp getChannel() {
+        return channel;
+    }
 
 
     // Методы создания и конфигурирования channel
@@ -52,12 +57,9 @@ public class JschSftpClient {
     public void channelSetFilenameEncoding(Charset ch) {
         channel.setFilenameEncoding(ch);
     }
+
     public void channelSetTimeout(int timeout) throws JSchException {
         channel.connect(timeout);
-    }
-
-    public ChannelSftp getChannel() {
-        return channel;
     }
 
     public boolean isConnectedChannel() {
@@ -86,6 +88,40 @@ public class JschSftpClient {
     //методы работы с channel
     public void channelRm(String name) throws SftpException {
         channel.rm(name);
+    }
+    public void channelRename(String from, String to) throws SftpException {
+        channel.rename(from, to);
+    }
+    public void channelMkdir(String directory) throws SftpException {
+        channel.mkdir(directory);
+    }
+    public String channelPwd() throws SftpException {
+        return channel.pwd();
+    }
+    public void channelCd(String path) throws SftpException {
+        channel.cd(path);
+    }
+    public Vector<?> channelLs(String path) throws SftpException {
+        return channel.ls(path);
+    }
+    public void channelLsByBreakSelector(String directory) throws SftpException {
+        channel.ls(directory, entry -> ChannelSftp.LsEntrySelector.BREAK);
+    }
+    public void channelChmod(String directory, int permissions) throws SftpException {
+        channel.chmod(permissions, directory);
+    }
+    public void channelPutModeAppend(String targetName, InputStream is) throws SftpException {
+        channel.put(is, targetName, ChannelSftp.APPEND);
+    }
+    public void channelPut(String targetName, InputStream is) throws SftpException {
+        channel.put(is, targetName);
+    }
+
+    public void channelGet(String remoteName, OutputStream os) throws SftpException {
+        channel.get(remoteName, os);
+    }
+    public InputStream channelGet(String remoteName) throws SftpException {
+        return channel.get(remoteName);
     }
 
 
