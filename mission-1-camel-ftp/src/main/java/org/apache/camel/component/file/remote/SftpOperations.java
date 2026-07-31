@@ -38,7 +38,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
 import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Proxy;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
@@ -187,7 +186,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                     LOG.debug("Connected to {}", payload.configuration.remoteServerInformation());
                 }
             }
-        } catch (JSchException | SftpClientException e) {
+        } catch ( SftpClientException e) {
             payload.exception = e;
 
             return false;
@@ -213,7 +212,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
 
 
-    protected Session createSession(final RemoteFileConfiguration configuration) throws JSchException {
+    protected Session createSession(final RemoteFileConfiguration configuration) throws SftpClientException {
         jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
@@ -238,7 +237,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                     byte[] keyData = Files.readAllBytes(Paths.get(sftpConfig.getPrivateKeyFile()));
                     jschClient.configureJSchIdentity(sftpConfig.getPrivateKeyFile(), keyData, certData, passphrase);
                 } catch (IOException e) {
-                    throw new JSchException("Cannot read private key file: " + sftpConfig.getPrivateKeyFile(), e);
+                    throw new SftpClientException("Cannot read private key file: " + sftpConfig.getPrivateKeyFile(), e);
                 }
             } else {
                 // No explicit cert — JSch auto-discovers <key>-cert.pub if it exists
@@ -268,7 +267,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 IOHelper.copyAndCloseInput(is, bos);
                 jschClient.configureJSchIdentity("ID", bos.toByteArray(), certData, passphrase);
             } catch (IOException e) {
-                throw new JSchException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
+                throw new SftpClientException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
             }
         }
 
@@ -300,7 +299,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                         sftpConfig.getKnownHostsUri());
                 jschClient.configureJSchKnownHost(is);
             } catch (IOException e) {
-                throw new JSchException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
+                throw new SftpClientException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
             }
         }
 
@@ -412,7 +411,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
      * Resolves certificate bytes from the configuration's certFile, certUri, or certBytes. Returns null if no
      * certificate is configured.
      */
-    private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws JSchException {
+    private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
         if (isNotEmpty(config.getCertFile())) {
             try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
                     endpoint.getCamelContext(), "file:" + config.getCertFile())) {
@@ -420,7 +419,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 IOHelper.copyAndCloseInput(is, bos);
                 return bos.toByteArray();
             } catch (IOException e) {
-                throw new JSchException("Cannot read certificate file: " + config.getCertFile(), e);
+                throw new SftpClientException("Cannot read certificate file: " + config.getCertFile(), e);
             }
         }
         if (isNotEmpty(config.getCertUri())) {
@@ -430,7 +429,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 IOHelper.copyAndCloseInput(is, bos);
                 return bos.toByteArray();
             } catch (IOException e) {
-                throw new JSchException("Cannot read certificate resource: " + config.getCertUri(), e);
+                throw new SftpClientException("Cannot read certificate resource: " + config.getCertUri(), e);
             }
         }
         if (config.getCertBytes() != null) {
