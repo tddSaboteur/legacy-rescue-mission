@@ -40,7 +40,6 @@ import java.util.regex.Pattern;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.Proxy;
 import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadException;
 import org.apache.camel.component.file.FileComponent;
@@ -598,7 +597,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 if (originalDirectory != null) {
                     changeCurrentDirectory(originalDirectory);
                 }
-            } catch (SftpException e) {
+            } catch (SftpClientException e) {
                 throw new GenericFileOperationFailedException("Cannot build directory: " + directory, e);
             }
 
@@ -610,7 +609,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
 
 
-    private boolean buildDirectoryChunks(String dirName) throws SftpException {
+    private boolean buildDirectoryChunks(String dirName) throws SftpClientException {
         final StringBuilder sb = new StringBuilder(dirName.length());
         final String[] dirs = dirName.split("/|\\\\");
         boolean success = false;
