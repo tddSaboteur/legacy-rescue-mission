@@ -50,6 +50,7 @@ import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
+import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.component.file.remote.gateway.JschSftpClient;
 import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.support.ResourceHelper;
@@ -176,7 +177,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 if (endpoint.getConfiguration().getConnectTimeout() > 0) {
                     LOG.trace("Connecting use connectTimeout: {} ...", endpoint.getConfiguration().getConnectTimeout());
                     var timeout = endpoint.getConfiguration().getConnectTimeout();
-                    jschClient.channelSetTimeout(timeout);
+                    jschClient.channelConnectWidthTimeout(timeout);
                 } else {
                     LOG.trace("Connecting ...");
                     jschClient.channelConnect();
@@ -186,7 +187,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                     LOG.debug("Connected to {}", payload.configuration.remoteServerInformation());
                 }
             }
-        } catch (JSchException e) {
+        } catch (JSchException | SftpClientException e) {
             payload.exception = e;
 
             return false;
@@ -199,12 +200,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private void configureBulkRequests() {
         try {
             tryConfigureBulkRequests();
-        } catch (JSchException e) {
+        } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Failed to configure number of bulk requests", e);
         }
     }
 
-    private void tryConfigureBulkRequests() throws JSchException {
+    private void tryConfigureBulkRequests() throws SftpClientException {
         Integer bulkRequests = endpoint.getConfiguration().getBulkRequests();
 
         jschClient.chanenlSetBulkRequsets(bulkRequests);
@@ -516,7 +517,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             reconnectIfNecessary(null);
             jschClient.channelRm(name);
             return true;
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             LOG.debug("Cannot delete file {}: {}", name, e.getMessage(), e);
             throw new GenericFileOperationFailedException("Cannot delete file: " + name, e);
         } finally {
@@ -536,7 +537,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             to = FileUtil.compactPath(to, '/');
             jschClient.channelRename(from, to);
             return true;
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             LOG.debug("Cannot rename file from: {} to: {}", from, to, e);
             throw new GenericFileOperationFailedException("Cannot rename file from: " + from + " to: " + to, e);
         } finally {
@@ -571,7 +572,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                         jschClient.channelLsByBreakSelector(directory);
                     }
                     success = true;
-                } catch (SftpException e) {
+                } catch (SftpClientException e) {
                     // ignore, we could not change directory so try to create it
                     // instead
                 }
@@ -581,7 +582,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                     try {
                         jschClient.channelMkdir(directory);
                         success = true;
-                    } catch (SftpException e) {
+                    } catch (SftpClientException e) {
                         // we are here if the server side doesn't create
                         // intermediate folders
                         // so create the folder one by one
@@ -633,7 +634,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
                     jschClient.channelMkdir(directory);
                     success = true;
-                } catch (SftpException e) {
+                } catch (SftpClientException e) {
                     // ignore keep trying to create the rest of the path
                 }
 
@@ -657,7 +658,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             String answer = jschClient.channelPwd();
             LOG.trace("Current dir: {}", answer);
             return answer;
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot get current directory", e);
         } finally {
             lock.unlock();
@@ -745,7 +746,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         LOG.trace("Changing directory: {}", path);
         try {
             jschClient.channelCd(path);
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot change directory to: " + path, e);
         }
     }
@@ -795,7 +796,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             return files.stream()
                     .map(f -> new SftpRemoteFileJCraft((ChannelSftp.LsEntry) f))
                     .toArray(SftpRemoteFileJCraft[]::new);
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot list directory: " + path, e);
         } finally {
             lock.unlock();
@@ -889,7 +890,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 changeCurrentDirectory(currentDir);
             }
             return true;
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             createResultHeadersFromExchange(e, exchange);
             throw new GenericFileOperationFailedException("Cannot retrieve file: " + name, e);
         } catch (IOException e) {
@@ -980,7 +981,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 changeCurrentDirectory(currentDir);
             }
 
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             createResultHeadersFromExchange(e, exchange);
             LOG.trace("Error occurred during retrieving file: {} to local directory. Deleting local work file: {}", name, temp);
             // failed to retrieve the file so we need to close streams and
@@ -1129,7 +1130,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             createResultHeadersFromExchange(null, exchange);
             return true;
 
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             createResultHeadersFromExchange(e, exchange);
             throw new GenericFileOperationFailedException("Cannot store file: " + name, e);
         } catch (UnsupportedEncodingException | InvalidPayloadException e) {
@@ -1148,7 +1149,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             jschClient.channelPut(name, bis);
             return true;
-        } catch (SftpException e) {
+        } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot store file: " + name, e);
         } finally {
             IOHelper.close(bis);
@@ -1189,13 +1190,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                     }
                 }
                 return false;
-            } catch (SftpException e) {
-                // or an exception can be thrown with id 2 which means file does not
-                // exists
-                if (ChannelSftp.SSH_FX_NO_SUCH_FILE == e.id) {
-                    return false;
-                }
-                // otherwise its a more serious error so rethrow
+            } catch (SftpClientException e) {
+
                 throw new GenericFileOperationFailedException(e.getMessage(), e);
             }
         } finally {
@@ -1212,13 +1208,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 return false;
             }
             return !files.isEmpty();
-        } catch (SftpException e) {
-            // or an exception can be thrown with id 2 which means file does not
-            // exists
-            if (ChannelSftp.SSH_FX_NO_SUCH_FILE == e.id) {
-                return false;
-            }
-            // otherwise its a more serious error so rethrow
+        } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException(e.getMessage(), e);
         }
     }
@@ -1248,14 +1238,14 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
      * Helper method which gets result code and message from sftpException and puts it into header. In case that
      * exception is null, it sets successfully response.
      */
-    private void createResultHeadersFromExchange(SftpException sftpException, Exchange exchange) {
+    private void createResultHeadersFromExchange(SftpClientException sftpException, Exchange exchange) {
         // if exception is null, it means that result was ok
         if (sftpException == null) {
             exchange.getIn().setHeader(FtpConstants.FTP_REPLY_CODE, OK_STATUS);
             exchange.getIn().setHeader(FtpConstants.FTP_REPLY_STRING, OK_MESSAGE);
         } else {
             // store client reply information after the operation
-            exchange.getIn().setHeader(FtpConstants.FTP_REPLY_CODE, sftpException.id);
+            exchange.getIn().setHeader(FtpConstants.FTP_REPLY_CODE, sftpException.getStatusCode());
             exchange.getIn().setHeader(FtpConstants.FTP_REPLY_STRING, sftpException.getMessage());
         }
     }
@@ -1271,7 +1261,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             int permissions = Integer.parseInt(chmodDirectory, 8);
             try {
                 jschClient.channelChmod(directory, permissions);
-            } catch (SftpException e) {
+            } catch (SftpClientException e) {
                 throw new GenericFileOperationFailedException("Cannot set permission on directory: " + directory, e);
             }
         }

@@ -5,6 +5,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.RuntimeCamelException;
 import org.apache.camel.component.file.remote.RemoteFileConfiguration;
 
+import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.util.IOHelper;
 import org.slf4j.Logger;
@@ -16,6 +17,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Vector;
 
 public class JschSftpClient {
@@ -41,25 +43,41 @@ public class JschSftpClient {
 
 
     // Методы создания и конфигурирования channel
-    public void channelConnect() throws JSchException {
-        channel.connect();
+    public void channelConnect() throws SftpClientException {
+        try {
+            channel.connect();
+        } catch (JSchException e) {
+            throw new SftpClientException("Ошибка соединения канала.",e);
+        }
     }
-    public void chanenlSetBulkRequsets(Integer bulkRequests) throws JSchException {
+    public void channelConnectWidthTimeout(int timeout) throws SftpClientException {
+        try {
+            channel.connect(timeout);
+        } catch (JSchException e) {
+            throw new SftpClientException("Ошибка соединения канала с использованием таймаута.",e);
+        }
+    }
+    public void chanenlSetBulkRequsets(Integer bulkRequests) throws SftpClientException {
         if (bulkRequests != null) {
             LOG.trace("configuring channel to use up to {} bulk request(s)", bulkRequests);
 
-            channel.setBulkRequests(bulkRequests);
+            try {
+                channel.setBulkRequests(bulkRequests);
+            } catch (JSchException e) {
+                throw new SftpClientException("Ошибка установки количества одновременных запросов.",e);
+            }
         }
     }
-    public void openChannel() throws JSchException {
-        channel = (ChannelSftp) session.openChannel("sftp");
-    }
-    public void channelSetFilenameEncoding(Charset ch) {
-        channel.setFilenameEncoding(ch);
+    public void openChannel() throws SftpClientException {
+        try {
+            channel = (ChannelSftp) session.openChannel("sftp");
+        } catch (JSchException e) {
+            throw new SftpClientException("Ошибка открытия канала.",e);
+        }
     }
 
-    public void channelSetTimeout(int timeout) throws JSchException {
-        channel.connect(timeout);
+    public void channelSetFilenameEncoding(Charset ch) {
+        channel.setFilenameEncoding(ch);
     }
 
     public boolean isConnectedChannel() {
@@ -86,42 +104,100 @@ public class JschSftpClient {
     }
 
     //методы работы с channel
-    public void channelRm(String name) throws SftpException {
-        channel.rm(name);
+    public void channelRm(String name) throws SftpClientException {
+        try {
+            channel.rm(name);
+        } catch (SftpException e) {
+            throw generateCommandException("rm",e);
+        }
     }
-    public void channelRename(String from, String to) throws SftpException {
-        channel.rename(from, to);
-    }
-    public void channelMkdir(String directory) throws SftpException {
-        channel.mkdir(directory);
-    }
-    public String channelPwd() throws SftpException {
-        return channel.pwd();
-    }
-    public void channelCd(String path) throws SftpException {
-        channel.cd(path);
-    }
-    public Vector<?> channelLs(String path) throws SftpException {
-        return channel.ls(path);
-    }
-    public void channelLsByBreakSelector(String directory) throws SftpException {
-        channel.ls(directory, entry -> ChannelSftp.LsEntrySelector.BREAK);
-    }
-    public void channelChmod(String directory, int permissions) throws SftpException {
-        channel.chmod(permissions, directory);
-    }
-    public void channelPutModeAppend(String targetName, InputStream is) throws SftpException {
-        channel.put(is, targetName, ChannelSftp.APPEND);
-    }
-    public void channelPut(String targetName, InputStream is) throws SftpException {
-        channel.put(is, targetName);
+    public void channelRename(String from, String to) throws SftpClientException {
+        try {
+            channel.rename(from, to);
+        } catch (SftpException e) {
+            throw generateCommandException("rename",e);
+        }
     }
 
-    public void channelGet(String remoteName, OutputStream os) throws SftpException {
-        channel.get(remoteName, os);
+    public void channelMkdir(String directory) throws SftpClientException {
+        try {
+            channel.mkdir(directory);
+        } catch (SftpException e) {
+            throw generateCommandException("mkdir",e);
+        }
     }
-    public InputStream channelGet(String remoteName) throws SftpException {
-        return channel.get(remoteName);
+    public String channelPwd() throws SftpClientException {
+        try {
+            return channel.pwd();
+        } catch (SftpException e) {
+            throw generateCommandException("pwd",e);
+        }
+    }
+    public void channelCd(String path) throws SftpClientException {
+        try {
+            channel.cd(path);
+        } catch (SftpException e) {
+            throw generateCommandException("cd",e);
+        }
+    }
+    public Vector<?> channelLs(String path) throws SftpClientException {
+        try {
+            return channel.ls(path);
+        } catch (SftpException e) {
+            // or an exception can be thrown with id 2 which means file does not
+            // exists
+            if (ChannelSftp.SSH_FX_NO_SUCH_FILE == e.id) {
+                return null;
+            }
+            throw generateCommandException("ls",e);
+        }
+    }
+    public void channelLsByBreakSelector(String directory) throws SftpClientException {
+        try {
+            channel.ls(directory, entry -> ChannelSftp.LsEntrySelector.BREAK);
+        } catch (SftpException e) {
+            throw generateCommandException("ls",e);
+        }
+    }
+    public void channelChmod(String directory, int permissions) throws SftpClientException {
+        try {
+            channel.chmod(permissions, directory);
+        } catch (SftpException e) {
+            throw generateCommandException("chmod",e);
+        }
+    }
+    public void channelPutModeAppend(String targetName, InputStream is) throws SftpClientException {
+        try {
+            channel.put(is, targetName, ChannelSftp.APPEND);
+        } catch (SftpException e) {
+            throw generateCommandException("put",e);
+        }
+    }
+    public void channelPut(String targetName, InputStream is) throws SftpClientException {
+        try {
+            channel.put(is, targetName);
+        } catch (SftpException e) {
+            throw generateCommandException("put",e);
+        }
+    }
+
+    private SftpClientException generateCommandException(String  command, SftpException cause) throws SftpClientException {
+        return new SftpClientException("Ошибка выполнения команды:%s".formatted(command),cause, cause.id);
+    }
+
+    public void channelGet(String remoteName, OutputStream os) throws SftpClientException {
+        try {
+            channel.get(remoteName, os);
+        } catch (SftpException e) {
+            generateCommandException("get",e);
+        }
+    }
+    public InputStream channelGet(String remoteName) throws SftpClientException {
+        try {
+            return channel.get(remoteName);
+        } catch (SftpException e) {
+            throw generateCommandException("get",e);
+        }
     }
 
 
