@@ -26,9 +26,7 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyPair;
 import java.time.Duration;
-import java.util.Base64;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.locks.Lock;
@@ -46,6 +44,7 @@ import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
+import org.apache.camel.component.file.remote.gateway.JschSetup;
 import org.apache.camel.component.file.remote.gateway.JschSftpClient;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.task.BlockingTask;
@@ -156,7 +155,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
         try {
             if (!jschClient.isConnectedChannel()) {
-                configureSession(payload.configuration);
+                initialiseJsch(payload.configuration);
                 jschClient.initSession(endpoint.getConfiguration().getConnectTimeout());
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
@@ -206,7 +205,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
 
 
-    protected void configureSession(final RemoteFileConfiguration configuration) throws SftpClientException {
+    protected void initialiseJsch(final RemoteFileConfiguration configuration) throws SftpClientException {
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
@@ -239,7 +238,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 throw new SftpClientException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
             }
         }
-        jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel(),sftpConfig, certData,privateKey,knownHostIS);
+        jschClient.createJsch(new JschSetup(endpoint.getConfiguration().getJschLoggingLevel(), sftpConfig, certData, privateKey, knownHostIS));
 
         // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
         // JSch's defaults exclude SHA-1 based algorithms (matching OpenSSH 8.2+ policy),
