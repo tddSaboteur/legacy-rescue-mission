@@ -26,8 +26,6 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.time.Duration;
 import java.util.Base64;
@@ -54,7 +52,6 @@ import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
 import org.apache.camel.util.FileUtil;
-import org.apache.camel.util.HomeHelper;
 import org.apache.camel.util.IOHelper;
 import org.apache.camel.util.ObjectHelper;
 import org.apache.camel.util.StopWatch;
@@ -210,117 +207,39 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
 
     protected void configureSession(final RemoteFileConfiguration configuration) throws SftpClientException {
-        jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
-        jschClient.setJSchGlobalCiphersAndKex(sftpConfig.getCiphers(), sftpConfig.getKeyExchangeProtocols());
-
-        // Resolve certificate bytes once — used for both identity loading and key type detection
         byte[] certData = resolveCertificateBytes(sftpConfig);
 
-        if (isNotEmpty(sftpConfig.getPrivateKeyFile())) {
-            LOG.debug("Using private keyfile: {}", sftpConfig.getPrivateKeyFile());
-            byte[] passphrase = null;
-            if (isNotEmpty(sftpConfig.getPrivateKeyPassphrase())) {
-                passphrase = sftpConfig.getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
-            }
-            if (certData != null) {
-                // Use byte-based overload for certificate — JSch's file-based
-                // addIdentity(prvkey, pubkey, passphrase) treats the second parameter
-                // as a public key file, not a certificate
-                LOG.debug("Using OpenSSH certificate for authentication");
-                try {
-                    byte[] keyData = Files.readAllBytes(Paths.get(sftpConfig.getPrivateKeyFile()));
-                    jschClient.configureJSchIdentity(sftpConfig.getPrivateKeyFile(), keyData, certData, passphrase);
-                } catch (IOException e) {
-                    throw new SftpClientException("Cannot read private key file: " + sftpConfig.getPrivateKeyFile(), e);
-                }
-            } else {
-                // No explicit cert — JSch auto-discovers <key>-cert.pub if it exists
-                jschClient.configureJSchIdentity(sftpConfig.getPrivateKeyFile(), passphrase);
-            }
-        }
 
-        if (sftpConfig.getPrivateKey() != null) {
-            LOG.debug("Using private key information from byte array");
-            byte[] passphrase = null;
-            if (isNotEmpty(sftpConfig.getPrivateKeyPassphrase())) {
-                passphrase = sftpConfig.getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
-            }
-            jschClient.configureJSchIdentity("ID", sftpConfig.getPrivateKey(), certData, passphrase);
-        }
-
+        byte[] privateKey = null;
         if (sftpConfig.getPrivateKeyUri() != null) {
             LOG.debug("Using private key uri : {}", sftpConfig.getPrivateKeyUri());
-            byte[] passphrase = null;
-            if (isNotEmpty(sftpConfig.getPrivateKeyPassphrase())) {
-                passphrase = sftpConfig.getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
-            }
+
             try {
                 InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
                         sftpConfig.getPrivateKeyUri());
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 IOHelper.copyAndCloseInput(is, bos);
-                jschClient.configureJSchIdentity("ID", bos.toByteArray(), certData, passphrase);
+                privateKey = bos.toByteArray();
+
             } catch (IOException e) {
                 throw new SftpClientException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
             }
         }
-
-        if (sftpConfig.getKeyPair() != null) {
-            LOG.debug("Using private key information from key pair");
-            KeyPair keyPair = sftpConfig.getKeyPair();
-            if (keyPair.getPrivate() != null) {
-                // Encode the private key in PEM format for JSCH
-                StringBuilder sb = new StringBuilder(256);
-                sb.append("-----BEGIN PRIVATE KEY-----").append("\n");
-                sb.append(Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded())).append("\n");
-                sb.append("-----END PRIVATE KEY-----").append("\n");
-
-                jschClient.configureJSchIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), certData, null);
-            } else {
-                LOG.warn("PrivateKey in the KeyPair must be filled");
-            }
-        }
-
-        if (isNotEmpty(sftpConfig.getKnownHostsFile())) {
-            LOG.debug("Using knownhosts file: {}", sftpConfig.getKnownHostsFile());
-            jschClient.configureJSchKnownHost(sftpConfig.getKnownHostsFile());
-        }
-
+        InputStream knownHostIS = null;
         if (isNotEmpty(sftpConfig.getKnownHostsUri())) {
             LOG.debug("Using known hosts uri: {}", sftpConfig.getKnownHostsUri());
             try {
-                InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
+                knownHostIS = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
                         sftpConfig.getKnownHostsUri());
-                jschClient.configureJSchKnownHost(is);
+
             } catch (IOException e) {
                 throw new SftpClientException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
             }
         }
-
-        if (sftpConfig.getKnownHosts() != null) {
-            LOG.debug("Using known hosts information from byte array");
-            jschClient.configureJSchKnownHost(new ByteArrayInputStream(sftpConfig.getKnownHosts()));
-        }
-
-        String knownHostsFile = sftpConfig.getKnownHostsFile();
-        if (knownHostsFile == null && sftpConfig.isUseUserKnownHostsFile()) {
-            knownHostsFile = HomeHelper.resolveHomeDir() + "/.ssh/known_hosts";
-            LOG.info("Known host file not configured, using user known host file: {}", knownHostsFile);
-        }
-        if (ObjectHelper.isNotEmpty(knownHostsFile)) {
-            LOG.debug("Using known hosts information from file: {}", knownHostsFile);
-            jschClient.configureJSchKnownHost(knownHostsFile);
-        }
-
-
-
-
-
-
-
+        jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel(),sftpConfig, certData,privateKey,knownHostIS);
 
         // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
         // JSch's defaults exclude SHA-1 based algorithms (matching OpenSSH 8.2+ policy),
