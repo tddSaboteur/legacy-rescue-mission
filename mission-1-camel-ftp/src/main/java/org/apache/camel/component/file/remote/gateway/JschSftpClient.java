@@ -3,8 +3,8 @@ package org.apache.camel.component.file.remote.gateway;
 import com.jcraft.jsch.*;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.RuntimeCamelException;
-import org.apache.camel.component.file.remote.RemoteFileConfiguration;
 
+import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.util.IOHelper;
@@ -17,8 +17,9 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.Charset;
-import java.util.List;
 import java.util.Vector;
+
+import static org.apache.camel.util.ObjectHelper.isNotEmpty;
 
 public class JschSftpClient {
 
@@ -242,11 +243,11 @@ public class JschSftpClient {
         }
     }
 
-    public void initSession(Session session, int connectTimeout) throws SftpClientException {
+    public void initSession( int connectTimeout) throws SftpClientException {
         if (session == null || !session.isConnected()) {
             LOG.trace("Session isn't connected, trying to recreate and connect.");
 
-            this.session = session;
+
             try {
                 if (connectTimeout > 0) {
                     LOG.trace("Connecting use connectTimeout: {} ...", connectTimeout);
@@ -263,21 +264,86 @@ public class JschSftpClient {
         }
     }
 
-    public Session createSession(RemoteFileConfiguration configuration) throws SftpClientException {
+    public void createSession(SftpConfiguration sftpConfig, String certKeyType) throws SftpClientException {
         try {
-            return jsch.getSession(configuration.getUsername(), configuration.getHost(), configuration.getPort());
+            Session session = jsch.getSession(sftpConfig.getUsername(), sftpConfig.getHost(), sftpConfig.getPort());
+            if (isNotEmpty(sftpConfig.getStrictHostKeyChecking())) {
+                LOG.debug("Using StrictHostKeyChecking: {}", sftpConfig.getStrictHostKeyChecking());
+                setSessionConfig(session, "StrictHostKeyChecking", sftpConfig.getStrictHostKeyChecking());
+            }
+
+            configAliveSession(session, sftpConfig.getServerAliveInterval(), sftpConfig.getServerAliveCountMax());
+            // compression
+            if (sftpConfig.getCompression() > 0) {
+                LOG.debug("Using compression: {}", sftpConfig.getCompression());
+                setSessionConfig(session, "compression.s2c", "zlib@openssh.com,zlib,none");
+                setSessionConfig(session, "compression.c2s", "zlib@openssh.com,zlib,none");
+                setSessionConfig(session, "compression_level", Integer.toString(sftpConfig.getCompression()));
+            }
+
+            // set the PreferredAuthentications
+            if (sftpConfig.getPreferredAuthentications() != null) {
+                LOG.debug("Using PreferredAuthentications: {}", sftpConfig.getPreferredAuthentications());
+                setSessionConfig(session, "PreferredAuthentications", sftpConfig.getPreferredAuthentications());
+            }
+            // set the ServerHostKeys
+            if (sftpConfig.getServerHostKeys() != null) {
+                LOG.debug("Using ServerHostKeys: {}", sftpConfig.getServerHostKeys());
+                setSessionConfig(session, "server_host_key", sftpConfig.getServerHostKeys());
+            }
+            // set the PublicKeyAcceptedAlgorithms
+            if (sftpConfig.getPublicKeyAcceptedAlgorithms() != null) {
+                LOG.debug("Using PublicKeyAcceptedAlgorithms: {}", sftpConfig.getPublicKeyAcceptedAlgorithms());
+                setSessionConfig(session, "PubkeyAcceptedAlgorithms", sftpConfig.getPublicKeyAcceptedAlgorithms());
+            }
+            // set the CASignatureAlgorithms
+            if (sftpConfig.getCaSignatureAlgorithms() != null) {
+                LOG.debug("Using CASignatureAlgorithms: {}", sftpConfig.getCaSignatureAlgorithms());
+                setSessionConfig(session, "ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
+            }
+            if (certKeyType != null) {
+                String defaults = getJSchPubkeyAcceptedAlgorithms();
+                if (defaults != null && !defaults.contains(certKeyType)) {
+                    setSessionConfig(session, "PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
+                    LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", certKeyType);
+                }
+            }
+            // set user information
+            configSesionUserInfo(session,
+                    new CamelLogger(LOG, ( sftpConfig).getServerMessageLoggingLevel()),
+                    sftpConfig.getPassword(),
+                    sftpConfig.isAutoCreateKnownHostsFile()
+            );
+
+            // set the SO_TIMEOUT for the time after the connect phase
+            if (sftpConfig.getServerAliveInterval() == 0) {
+                if (sftpConfig.getSoTimeout() > 0) {
+                    setSessionTimeout(session, sftpConfig.getSoTimeout());
+                }
+            } else {
+                LOG.debug(
+                        "The Server Alive Internal is already set, the socket timeout won't be considered to avoid overidding the provided Server alive interval value");
+            }
+
+            if (isNotEmpty(sftpConfig.getBindAddress())) {
+
+                configureSessionSocketFactory(session, sftpConfig.getBindAddress());
+            }
+
+            // set proxy if configured
+            sesionSetProxy(session);
+            this.session = session;
+
         } catch (JSchException e) {
             throw new SftpClientException("Ошибка получения сессии", e);
         }
     }
 
-
-    //todo сейчас в методы нужно передавать сессию иначе сломаем многопоточку, в дальнейшем уберем в билдер или фабрику
-    public void setSessionConfig(Session session, String key, String value) {
+    private void setSessionConfig(Session session, String key, String value) {
         session.setConfig(key, value);
     }
 
-    public void configAliveSession(Session session, int interval, int count) throws SftpClientException {
+    private void configAliveSession(Session session, int interval, int count) throws SftpClientException {
         try {
             session.setServerAliveInterval(interval);
         } catch (JSchException e) {
@@ -286,12 +352,12 @@ public class JschSftpClient {
         session.setServerAliveCountMax(count);
     }
 
-    public void configSesionUserInfo(Session session, CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
+    private void configSesionUserInfo(Session session, CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
         ExtendedUserInfo userInfo = createUserInfo(messageLogger, password, isAutoCreateKnownHostsFile);
         session.setUserInfo(userInfo);
     }
 
-    public void setSessionTimeout(Session session, int timeout) throws SftpClientException {
+    private void setSessionTimeout(Session session, int timeout) throws SftpClientException {
         try {
             session.setTimeout(timeout);
         } catch (JSchException e) {
@@ -299,13 +365,13 @@ public class JschSftpClient {
         }
     }
 
-    public void sesionSetProxy(Session session) {
+    private void sesionSetProxy(Session session) {
         if (proxy != null) {
             session.setProxy(proxy);
         }
     }
 
-    public void configureSessionSocketFactory(Session session, String bindAddress) {
+    private void configureSessionSocketFactory(Session session, String bindAddress) {
         session.setSocketFactory(createSocketFactory(session.getTimeout(), bindAddress));
     }
     //todo end

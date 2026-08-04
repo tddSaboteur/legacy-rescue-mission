@@ -39,7 +39,6 @@ import java.util.regex.Pattern;
 
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.Proxy;
-import com.jcraft.jsch.Session;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadException;
 import org.apache.camel.component.file.FileComponent;
@@ -50,7 +49,6 @@ import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.component.file.remote.gateway.JschSftpClient;
-import org.apache.camel.spi.CamelLogger;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
@@ -161,8 +159,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
         try {
             if (!jschClient.isConnectedChannel()) {
-
-                jschClient.initSession(createSession(payload.configuration), endpoint.getConfiguration().getConnectTimeout());
+                configureSession(payload.configuration);
+                jschClient.initSession(endpoint.getConfiguration().getConnectTimeout());
 
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
                 jschClient.openChannel();
@@ -211,7 +209,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
 
 
-    protected Session createSession(final RemoteFileConfiguration configuration) throws SftpClientException {
+    protected void configureSession(final RemoteFileConfiguration configuration) throws SftpClientException {
         jschClient.createJsch(endpoint.getConfiguration().getJschLoggingLevel());
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
@@ -317,40 +315,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             jschClient.configureJSchKnownHost(knownHostsFile);
         }
 
-        final Session session = jschClient.createSession(configuration);
 
-        if (isNotEmpty(sftpConfig.getStrictHostKeyChecking())) {
-            LOG.debug("Using StrictHostKeyChecking: {}", sftpConfig.getStrictHostKeyChecking());
-            jschClient.setSessionConfig(session, "StrictHostKeyChecking", sftpConfig.getStrictHostKeyChecking());
-        }
 
-        jschClient.configAliveSession(session, sftpConfig.getServerAliveInterval(), sftpConfig.getServerAliveCountMax());
 
-        // compression
-        if (sftpConfig.getCompression() > 0) {
-            LOG.debug("Using compression: {}", sftpConfig.getCompression());
-            jschClient.setSessionConfig(session, "compression.s2c", "zlib@openssh.com,zlib,none");
-            jschClient.setSessionConfig(session, "compression.c2s", "zlib@openssh.com,zlib,none");
-            jschClient.setSessionConfig(session, "compression_level", Integer.toString(sftpConfig.getCompression()));
-        }
 
-        // set the PreferredAuthentications
-        if (sftpConfig.getPreferredAuthentications() != null) {
-            LOG.debug("Using PreferredAuthentications: {}", sftpConfig.getPreferredAuthentications());
-            jschClient.setSessionConfig(session, "PreferredAuthentications", sftpConfig.getPreferredAuthentications());
-        }
 
-        // set the ServerHostKeys
-        if (sftpConfig.getServerHostKeys() != null) {
-            LOG.debug("Using ServerHostKeys: {}", sftpConfig.getServerHostKeys());
-            jschClient.setSessionConfig(session, "server_host_key", sftpConfig.getServerHostKeys());
-        }
 
-        // set the PublicKeyAcceptedAlgorithms
-        if (sftpConfig.getPublicKeyAcceptedAlgorithms() != null) {
-            LOG.debug("Using PublicKeyAcceptedAlgorithms: {}", sftpConfig.getPublicKeyAcceptedAlgorithms());
-            jschClient.setSessionConfig(session, "PubkeyAcceptedAlgorithms", sftpConfig.getPublicKeyAcceptedAlgorithms());
-        }
 
         // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
         // JSch's defaults exclude SHA-1 based algorithms (matching OpenSSH 8.2+ policy),
@@ -358,51 +328,13 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         // drafts). If the loaded certificate uses a key type not in the accepted list,
         // JSch silently skips the certificate identity and auth fails.
         // Detect the cert type and add it if missing.
+        String certKeyType = null;
         if (sftpConfig.getPublicKeyAcceptedAlgorithms() == null) {
-            String certKeyType = detectCertKeyType(certData);
-            if (certKeyType != null) {
-                String defaults = jschClient.getJSchPubkeyAcceptedAlgorithms();
-                if (defaults != null && !defaults.contains(certKeyType)) {
-                    jschClient.setSessionConfig(session, "PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
-                    LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", certKeyType);
-                }
-            }
+            certKeyType = detectCertKeyType(certData);
+
         }
 
-        // set the CASignatureAlgorithms
-        if (sftpConfig.getCaSignatureAlgorithms() != null) {
-            LOG.debug("Using CASignatureAlgorithms: {}", sftpConfig.getCaSignatureAlgorithms());
-            jschClient.setSessionConfig(session, "ca_signature_algorithms", sftpConfig.getCaSignatureAlgorithms());
-        }
-
-
-        // set user information
-        jschClient.configSesionUserInfo(session,
-                new CamelLogger(LOG, ((SftpConfiguration) configuration).getServerMessageLoggingLevel()),
-                configuration.getPassword(),
-                ((SftpConfiguration) configuration).isAutoCreateKnownHostsFile()
-        );
-
-        // set the SO_TIMEOUT for the time after the connect phase
-        if (sftpConfig.getServerAliveInterval() == 0) {
-            if (configuration.getSoTimeout() > 0) {
-                jschClient.setSessionTimeout(session, configuration.getSoTimeout());
-            }
-        } else {
-            LOG.debug(
-                    "The Server Alive Internal is already set, the socket timeout won't be considered to avoid overidding the provided Server alive interval value");
-        }
-
-        // set proxy if configured
-        jschClient.sesionSetProxy(session);
-
-
-        if (isNotEmpty(sftpConfig.getBindAddress())) {
-
-            jschClient.configureSessionSocketFactory(session, sftpConfig.getBindAddress());
-        }
-
-        return session;
+        jschClient.createSession(sftpConfig, certKeyType);
     }
 
 
