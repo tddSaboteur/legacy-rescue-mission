@@ -156,11 +156,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             if (!jschClient.isConnectedChannel()) {
                 initialiseJsch(payload.configuration);
-                jschClient.initSession(endpoint.getConfiguration().getConnectTimeout());
-
                 LOG.trace("Channel isn't connected, trying to recreate and connect.");
                 jschClient.openChannel();
-
                 if (endpoint.getConfiguration().getFilenameEncoding() != null) {
                     Charset ch = Charset.forName(endpoint.getConfiguration().getFilenameEncoding());
                     LOG.trace("Using filename encoding: {}", ch);
@@ -253,6 +250,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
 
         jschClient.createSession(sftpConfig, certKeyType);
+
     }
 
 

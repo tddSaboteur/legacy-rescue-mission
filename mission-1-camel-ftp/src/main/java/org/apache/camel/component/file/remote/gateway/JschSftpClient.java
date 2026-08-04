@@ -45,12 +45,6 @@ public class JschSftpClient {
         this.proxy = proxy;
     }
 
-    //todo временный для доступа к Channel
-    public ChannelSftp getChannel() {
-        return channel;
-    }
-
-
     // Методы создания и конфигурирования channel
     public void channelConnect() throws SftpClientException {
         try {
@@ -345,6 +339,9 @@ public class JschSftpClient {
         } catch (JSchException e) {
             throw new SftpClientException("Ошибка получения сессии", e);
         }
+        initSession(sftpConfig.getConnectTimeout());
+
+
     }
 
     private void setSessionConfig(Session session, String key, String value) {
