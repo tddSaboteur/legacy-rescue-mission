@@ -109,7 +109,7 @@ public class JschSessionFactory {
     }
 
     private void configSessionUserInfo(Session session, CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
-        JschSftpClient.ExtendedUserInfo userInfo = createUserInfo(messageLogger, password, isAutoCreateKnownHostsFile);
+        ExtendedUserInfo userInfo = createUserInfo(messageLogger, password, isAutoCreateKnownHostsFile);
         session.setUserInfo(userInfo);
     }
     private void setSessionTimeout(Session session, int timeout) throws SftpClientException {
@@ -128,9 +128,11 @@ public class JschSessionFactory {
     private void configureSessionSocketFactory(Session session, String bindAddress) {
         session.setSocketFactory(createSocketFactory(session.getTimeout(), bindAddress));
     }
+    public interface ExtendedUserInfo extends UserInfo, UIKeyboardInteractive {
+    }
 
-    private JschSftpClient.ExtendedUserInfo createUserInfo(CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
-        return new JschSftpClient.ExtendedUserInfo() {
+    private ExtendedUserInfo createUserInfo(CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
+        return new ExtendedUserInfo() {
             public String getPassphrase() {
                 return null;
             }
@@ -177,6 +179,7 @@ public class JschSessionFactory {
 
         };
     }
+
     private SocketFactory createSocketFactory(int timeout, String bindAddress) {
         return new SocketFactory() {
 

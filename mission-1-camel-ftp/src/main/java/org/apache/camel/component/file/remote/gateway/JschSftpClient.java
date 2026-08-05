@@ -273,8 +273,7 @@ public class JschSftpClient {
 
     }
 
-    public interface ExtendedUserInfo extends UserInfo, UIKeyboardInteractive {
-    }
+
 
 
     //методы JSch
