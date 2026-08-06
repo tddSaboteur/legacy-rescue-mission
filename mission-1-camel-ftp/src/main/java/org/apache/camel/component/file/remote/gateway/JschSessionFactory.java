@@ -23,49 +23,24 @@ public class JschSessionFactory {
     public Session createSession(SessionContext sessionContext) throws JSchException {
         try {
             Session session = sessionContext.jsch().getSession(sessionContext.sftpConfig().getUsername(), sessionContext.sftpConfig().getHost(), sessionContext.sftpConfig().getPort());
-            if (isNotEmpty(sessionContext.sftpConfig().getStrictHostKeyChecking())) {
-                LOG.debug("Using StrictHostKeyChecking: {}", sessionContext.sftpConfig().getStrictHostKeyChecking());
-                setSessionConfig(session, "StrictHostKeyChecking", sessionContext.sftpConfig().getStrictHostKeyChecking());
-            }
 
-            configAliveSession(session, sessionContext.sftpConfig().getServerAliveInterval(), sessionContext.sftpConfig().getServerAliveCountMax());
+            configureHostKeyCheking(sessionContext.sftpConfig().getStrictHostKeyChecking(), session);
+            configureAlive(session, sessionContext.sftpConfig().getServerAliveInterval(), sessionContext.sftpConfig().getServerAliveCountMax());
             // compression
-            if (sessionContext.sftpConfig().getCompression() > 0) {
-                LOG.debug("Using compression: {}", sessionContext.sftpConfig().getCompression());
-                setSessionConfig(session, "compression.s2c", "zlib@openssh.com,zlib,none");
-                setSessionConfig(session, "compression.c2s", "zlib@openssh.com,zlib,none");
-                setSessionConfig(session, "compression_level", Integer.toString(sessionContext.sftpConfig().getCompression()));
-            }
+            configureCompression(sessionContext.sftpConfig().getCompression(), session);
 
             // set the PreferredAuthentications
-            if (sessionContext.sftpConfig().getPreferredAuthentications() != null) {
-                LOG.debug("Using PreferredAuthentications: {}", sessionContext.sftpConfig().getPreferredAuthentications());
-                setSessionConfig(session, "PreferredAuthentications", sessionContext.sftpConfig().getPreferredAuthentications());
-            }
+            configurePreferredAuthentications(sessionContext.sftpConfig().getPreferredAuthentications(), session);
             // set the ServerHostKeys
-            if (sessionContext.sftpConfig().getServerHostKeys() != null) {
-                LOG.debug("Using ServerHostKeys: {}", sessionContext.sftpConfig().getServerHostKeys());
-                setSessionConfig(session, "server_host_key", sessionContext.sftpConfig().getServerHostKeys());
-            }
+            configureHostKeys(sessionContext.sftpConfig().getServerHostKeys(), session);
             // set the PublicKeyAcceptedAlgorithms
-            if (sessionContext.sftpConfig().getPublicKeyAcceptedAlgorithms() != null) {
-                LOG.debug("Using PublicKeyAcceptedAlgorithms: {}", sessionContext.sftpConfig().getPublicKeyAcceptedAlgorithms());
-                setSessionConfig(session, "PubkeyAcceptedAlgorithms", sessionContext.sftpConfig().getPublicKeyAcceptedAlgorithms());
-            }
+            configurePublicKeyAcceptedAlgorithms(sessionContext.sftpConfig().getPublicKeyAcceptedAlgorithms(), session);
             // set the CASignatureAlgorithms
-            if (sessionContext.sftpConfig().getCaSignatureAlgorithms() != null) {
-                LOG.debug("Using CASignatureAlgorithms: {}", sessionContext.sftpConfig().getCaSignatureAlgorithms());
-                setSessionConfig(session, "ca_signature_algorithms", sessionContext.sftpConfig().getCaSignatureAlgorithms());
-            }
-            if (sessionContext.certKeyType() != null) {
-                String defaults = getJSchPubkeyAcceptedAlgorithms();
-                if (defaults != null && !defaults.contains(sessionContext.certKeyType())) {
-                    setSessionConfig(session, "PubkeyAcceptedAlgorithms", sessionContext.certKeyType() + "," + defaults);
-                    LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", sessionContext.certKeyType());
-                }
-            }
+            configureCASignatureAlgorithms(sessionContext.sftpConfig().getCaSignatureAlgorithms(), session);
+
+            configureKeyType(sessionContext.certKeyType(), session);
             // set user information
-            configSessionUserInfo(session,
+            configureSessionUserInfo(session,
                     new CamelLogger(LOG, (sessionContext.sftpConfig()).getServerMessageLoggingLevel()),
                     sessionContext.sftpConfig().getPassword(),
                     sessionContext.sftpConfig().isAutoCreateKnownHostsFile()
@@ -73,21 +48,18 @@ public class JschSessionFactory {
 
             // set the SO_TIMEOUT for the time after the connect phase
             if (sessionContext.sftpConfig().getServerAliveInterval() == 0) {
-                if (sessionContext.sftpConfig().getSoTimeout() > 0) {
-                    setSessionTimeout(session, sessionContext.sftpConfig().getSoTimeout());
-                }
+
+                configureTimeout(session, sessionContext.sftpConfig().getSoTimeout());
+
             } else {
                 LOG.debug(
                         "The Server Alive Internal is already set, the socket timeout won't be considered to avoid overidding the provided Server alive interval value");
             }
 
-            if (isNotEmpty(sessionContext.sftpConfig().getBindAddress())) {
-
-                configureSessionSocketFactory(session, sessionContext.sftpConfig().getBindAddress());
-            }
+            configureSessionSocketFactory(session, sessionContext.sftpConfig().getBindAddress());
 
             // set proxy if configured
-            sessionSetProxy(session, sessionContext.proxy());
+            configureProxy(session, sessionContext.proxy());
             return session;
 
         } catch (JSchException e) {
@@ -95,11 +67,65 @@ public class JschSessionFactory {
         }
     }
 
+    private void configureKeyType(String certKeyType, Session session) {
+        if (certKeyType != null) {
+            String defaults = getJSchPubkeyAcceptedAlgorithms();
+            if (defaults != null && !defaults.contains(certKeyType)) {
+                setSessionConfig(session, "PubkeyAcceptedAlgorithms", certKeyType + "," + defaults);
+                LOG.debug("Added certificate key type {} to PubkeyAcceptedAlgorithms", certKeyType);
+            }
+        }
+    }
+
+    private void configureCASignatureAlgorithms(String caSignatureAlgorithms, Session session) {
+        if (caSignatureAlgorithms != null) {
+            LOG.debug("Using CASignatureAlgorithms: {}", caSignatureAlgorithms);
+            setSessionConfig(session, "ca_signature_algorithms", caSignatureAlgorithms);
+        }
+    }
+
+    private void configurePublicKeyAcceptedAlgorithms(String publicKeyAcceptedAlgorithms, Session session) {
+        if (publicKeyAcceptedAlgorithms != null) {
+            LOG.debug("Using PublicKeyAcceptedAlgorithms: {}", publicKeyAcceptedAlgorithms);
+            setSessionConfig(session, "PubkeyAcceptedAlgorithms", publicKeyAcceptedAlgorithms);
+        }
+    }
+
+    private void configureHostKeys(String hostKeys, Session session) {
+        if (hostKeys != null) {
+            LOG.debug("Using ServerHostKeys: {}", hostKeys);
+            setSessionConfig(session, "server_host_key", hostKeys);
+        }
+    }
+
+    private void configurePreferredAuthentications(String preferredAuthentications, Session session) {
+        if (preferredAuthentications != null) {
+            LOG.debug("Using PreferredAuthentications: {}", preferredAuthentications);
+            setSessionConfig(session, "PreferredAuthentications", preferredAuthentications);
+        }
+    }
+
+    private void configureCompression(int compression, Session session) {
+        if (compression > 0) {
+            LOG.debug("Using compression: {}", compression);
+            setSessionConfig(session, "compression.s2c", "zlib@openssh.com,zlib,none");
+            setSessionConfig(session, "compression.c2s", "zlib@openssh.com,zlib,none");
+            setSessionConfig(session, "compression_level", Integer.toString(compression));
+        }
+    }
+
+    private void configureHostKeyCheking(String strictHostKeyChecking, Session session) {
+        if (isNotEmpty(strictHostKeyChecking)) {
+            LOG.debug("Using StrictHostKeyChecking: {}", strictHostKeyChecking);
+            setSessionConfig(session, "StrictHostKeyChecking", strictHostKeyChecking);
+        }
+    }
+
     private void setSessionConfig(Session session, String key, String value) {
         session.setConfig(key, value);
     }
 
-    private void configAliveSession(Session session, int interval, int count) throws SftpClientException {
+    private void configureAlive(Session session, int interval, int count) throws SftpClientException {
         try {
             session.setServerAliveInterval(interval);
         } catch (JSchException e) {
@@ -108,26 +134,33 @@ public class JschSessionFactory {
         session.setServerAliveCountMax(count);
     }
 
-    private void configSessionUserInfo(Session session, CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
+    private void configureSessionUserInfo(Session session, CamelLogger messageLogger, String password, boolean isAutoCreateKnownHostsFile) {
         ExtendedUserInfo userInfo = createUserInfo(messageLogger, password, isAutoCreateKnownHostsFile);
         session.setUserInfo(userInfo);
     }
-    private void setSessionTimeout(Session session, int timeout) throws SftpClientException {
-        try {
-            session.setTimeout(timeout);
-        } catch (JSchException e) {
-            throw new SftpClientException("Ошибка настройки таймаута сессии.", e);
+
+    private void configureTimeout(Session session, int timeout) throws SftpClientException {
+        if (timeout > 0) {
+            try {
+                session.setTimeout(timeout);
+            } catch (JSchException e) {
+                throw new SftpClientException("Ошибка настройки таймаута сессии.", e);
+            }
         }
     }
-    private void sessionSetProxy(Session session, Proxy proxy) {
+
+    private void configureProxy(Session session, Proxy proxy) {
         if (proxy != null) {
             session.setProxy(proxy);
         }
     }
 
     private void configureSessionSocketFactory(Session session, String bindAddress) {
-        session.setSocketFactory(createSocketFactory(session.getTimeout(), bindAddress));
+        if (isNotEmpty(bindAddress)) {
+            session.setSocketFactory(createSocketFactory(session.getTimeout(), bindAddress));
+        }
     }
+
     public interface ExtendedUserInfo extends UserInfo, UIKeyboardInteractive {
     }
 
