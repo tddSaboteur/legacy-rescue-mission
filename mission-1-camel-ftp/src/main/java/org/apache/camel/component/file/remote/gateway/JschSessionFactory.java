@@ -214,76 +214,11 @@ public class JschSessionFactory {
     }
 
     private SocketFactory createSocketFactory(int timeout, String bindAddress) {
-        return new SocketFactory() {
-
-            @Override
-            public OutputStream getOutputStream(Socket socket) throws IOException {
-                return socket.getOutputStream();
-            }
-
-            @Override
-            public InputStream getInputStream(Socket socket) throws IOException {
-                return socket.getInputStream();
-            }
-
-            @Override
-            public Socket createSocket(String host, int port) throws IOException {
-                return createSocketUtil(host, port, bindAddress, timeout);
-            }
-        };
+        return new JschSocketFactory(bindAddress,timeout);
     }
 
-    /*
-     * adapted from com.jcraft.jsch.Util.createSocket(String, int, int) added
-     * possibility to specify the address of the local network interface,
-     * against the connection should bind
-     */
-    private Socket createSocketUtil(final String host, final int port, final String bindAddress, final int timeout) {
-        Socket socket;
-        if (timeout == 0) {
-            try {
-                socket = new Socket(InetAddress.getByName(host), port, InetAddress.getByName(bindAddress), 0);
-                return socket;
-            } catch (Exception e) {
-                String message = e.toString();
-                throw new RuntimeCamelException(message, e);
-            }
-        }
-        final Socket[] sockp = new Socket[1];
-        final Exception[] ee = new Exception[1];
-        String message = "";
-        Thread tmp = new Thread(() -> {
-            sockp[0] = null;
-            try {
-                sockp[0] = new Socket(InetAddress.getByName(host), port, InetAddress.getByName(bindAddress), 0);
-            } catch (Exception e) {
-                ee[0] = e;
-                if (sockp[0] != null && sockp[0].isConnected()) {
-                    IOHelper.close(sockp[0]);
-                }
-                sockp[0] = null;
-            }
-        });
-        tmp.setName("Opening Socket " + host);
-        tmp.start();
-        try {
-            tmp.join(timeout);
-            message = "timeout: ";
-        } catch (java.lang.InterruptedException eee) {
-            Thread.currentThread().interrupt();
-        }
-        if (sockp[0] != null && sockp[0].isConnected()) {
-            socket = sockp[0];
-        } else {
-            message += "socket is not established";
-            if (ee[0] != null) {
-                message = ee[0].toString();
-            }
-            tmp.interrupt();
-            throw new RuntimeCamelException(message, ee[0]);
-        }
-        return socket;
-    }
+
+
 
     private String getJSchPubkeyAcceptedAlgorithms() {
         return JSch.getConfig("PubkeyAcceptedAlgorithms");
