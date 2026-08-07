@@ -26,20 +26,15 @@ public class JschSessionFactory {
 
             configureHostKeyCheking(sessionContext.sftpConfig().getStrictHostKeyChecking(), session);
             configureAlive(session, sessionContext.sftpConfig().getServerAliveInterval(), sessionContext.sftpConfig().getServerAliveCountMax());
-            // compression
             configureCompression(sessionContext.sftpConfig().getCompression(), session);
 
-            // set the PreferredAuthentications
             configurePreferredAuthentications(sessionContext.sftpConfig().getPreferredAuthentications(), session);
-            // set the ServerHostKeys
             configureHostKeys(sessionContext.sftpConfig().getServerHostKeys(), session);
-            // set the PublicKeyAcceptedAlgorithms
             configurePublicKeyAcceptedAlgorithms(sessionContext.sftpConfig().getPublicKeyAcceptedAlgorithms(), session);
-            // set the CASignatureAlgorithms
             configureCASignatureAlgorithms(sessionContext.sftpConfig().getCaSignatureAlgorithms(), session);
 
             configureKeyType(sessionContext.certKeyType(), session);
-            // set user information
+
             configureSessionUserInfo(session,
                     new CamelLogger(LOG, (sessionContext.sftpConfig()).getServerMessageLoggingLevel()),
                     sessionContext.sftpConfig().getPassword(),
@@ -57,8 +52,6 @@ public class JschSessionFactory {
             }
 
             configureSessionSocketFactory(session, sessionContext.sftpConfig().getBindAddress());
-
-            // set proxy if configured
             configureProxy(session, sessionContext.proxy());
             return session;
 
