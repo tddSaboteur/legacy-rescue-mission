@@ -229,7 +229,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         }
 
-        jschClient.createJsch(new JschSetup(endpoint.getConfiguration().getJschLoggingLevel(), sftpConfig, certData, privateKey, knownHostIS));
+        jschClient.createJsch(new JschSetup( sftpConfig, certData, privateKey, knownHostIS));
         jschClient.createSession(sftpConfig, certKeyType);
         LOG.trace("Channel isn't connected, trying to recreate and connect.");
         jschClient.openChannel(endpoint.getConfiguration().getFilenameEncoding(), endpoint.getConfiguration().getConnectTimeout());
