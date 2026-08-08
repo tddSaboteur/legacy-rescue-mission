@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -156,25 +155,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             if (!jschClient.isConnectedChannel()) {
                 initialiseJsch(payload.configuration);
-                LOG.trace("Channel isn't connected, trying to recreate and connect.");
-                jschClient.openChannel();
-                if (endpoint.getConfiguration().getFilenameEncoding() != null) {
-                    Charset ch = Charset.forName(endpoint.getConfiguration().getFilenameEncoding());
-                    LOG.trace("Using filename encoding: {}", ch);
-                    jschClient.channelSetFilenameEncoding(ch);
-                }
-                if (endpoint.getConfiguration().getConnectTimeout() > 0) {
-                    LOG.trace("Connecting use connectTimeout: {} ...", endpoint.getConfiguration().getConnectTimeout());
-                    var timeout = endpoint.getConfiguration().getConnectTimeout();
-                    jschClient.channelConnectWidthTimeout(timeout);
-                } else {
-                    LOG.trace("Connecting ...");
-                    jschClient.channelConnect();
-                }
 
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Connected to {}", payload.configuration.remoteServerInformation());
-                }
             }
         } catch ( SftpClientException e) {
             payload.exception = e;
@@ -235,7 +216,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 throw new SftpClientException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
             }
         }
-        jschClient.createJsch(new JschSetup(endpoint.getConfiguration().getJschLoggingLevel(), sftpConfig, certData, privateKey, knownHostIS));
 
         // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
         // JSch's defaults exclude SHA-1 based algorithms (matching OpenSSH 8.2+ policy),
@@ -249,8 +229,16 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         }
 
+        jschClient.createJsch(new JschSetup(endpoint.getConfiguration().getJschLoggingLevel(), sftpConfig, certData, privateKey, knownHostIS));
         jschClient.createSession(sftpConfig, certKeyType);
+        LOG.trace("Channel isn't connected, trying to recreate and connect.");
+        jschClient.openChannel(endpoint.getConfiguration().getFilenameEncoding(), endpoint.getConfiguration().getConnectTimeout());
 
+
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Connected to {}", sftpConfig.remoteServerInformation());
+        }
     }
 
 

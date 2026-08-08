@@ -69,12 +69,26 @@ public class JschSftpClient {
         }
     }
 
-    public void openChannel() throws SftpClientException {
+    public void openChannel(String filenameEncoding, int connectTimeout) throws SftpClientException {
         try {
             channel = (ChannelSftp) session.openChannel("sftp");
         } catch (JSchException e) {
             throw new SftpClientException("Ошибка открытия канала.", e);
         }
+        if (filenameEncoding != null) {
+            Charset ch = Charset.forName(filenameEncoding);
+            LOG.trace("Using filename encoding: {}", ch);
+            channelSetFilenameEncoding(ch);
+        }
+
+        if (connectTimeout > 0) {
+            LOG.trace("Connecting use connectTimeout: {} ...", connectTimeout);
+            channelConnectWidthTimeout(connectTimeout);
+        } else {
+            LOG.trace("Connecting ...");
+            channelConnect();
+        }
+
     }
 
     public void channelSetFilenameEncoding(Charset ch) {
