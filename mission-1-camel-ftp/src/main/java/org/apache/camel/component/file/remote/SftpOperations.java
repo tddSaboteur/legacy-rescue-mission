@@ -156,7 +156,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             if (!jschClient.isConnectedChannel()) {
                 initialiseJsch(payload.configuration);
             }
-        } catch ( SftpClientException e) {
+        } catch (SftpClientException e) {
             payload.exception = e;
 
             return false;
@@ -166,19 +166,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
 
-    private void configureBulkRequests() {
-        try {
-            tryConfigureBulkRequests();
-        } catch (SftpClientException e) {
-            throw new GenericFileOperationFailedException("Failed to configure number of bulk requests", e);
-        }
-    }
-
-    private void tryConfigureBulkRequests() throws SftpClientException {
-        Integer bulkRequests = endpoint.getConfiguration().getBulkRequests();
-
-        jschClient.channelSetBulkRequests(bulkRequests);
-    }
 
 
 
@@ -228,7 +215,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         }
 
-        jschClient.initSftpClient(new JschSetup( sftpConfig, certData, privateKey, knownHostIS,certKeyType));
+        jschClient.initSftpClient(new JschSetup(sftpConfig, certData, privateKey, knownHostIS, certKeyType));
     }
 
 
@@ -291,7 +278,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         return null;
     }
 
-
     @Override
     public boolean isConnected() throws GenericFileOperationFailedException {
         lock.lock();
@@ -313,18 +299,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
     }
 
-
-
-
     @Override
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
         jschClient.channelForceDisconnect();
         lock.unlock();
     }
-
-
-
 
     private void reconnectIfNecessary(Exchange exchange) {
         if (!isConnected()) {
@@ -367,7 +347,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             lock.unlock();
         }
     }
-
 
 
     @Override
@@ -433,7 +412,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
 
-
     private boolean buildDirectoryChunks(String dirName) throws SftpClientException {
         final StringBuilder sb = new StringBuilder(dirName.length());
         final String[] dirs = dirName.split("/|\\\\");
@@ -472,7 +450,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
 
-
     @Override
     public String getCurrentDirectory() throws GenericFileOperationFailedException {
         lock.lock();
@@ -487,7 +464,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             lock.unlock();
         }
     }
-
 
 
     @Override
@@ -627,7 +603,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
 
-
     @Override
     public boolean retrieveFile(String name, Exchange exchange, long size)
             throws GenericFileOperationFailedException {
@@ -720,7 +695,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             throw new GenericFileOperationFailedException("Cannot retrieve file: " + name, e);
         }
     }
-
 
 
     @SuppressWarnings("unchecked")
@@ -837,7 +811,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         return true;
     }
-
 
 
     @Override
@@ -962,7 +935,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             IOHelper.close(is, "store: " + name, LOG);
         }
     }
-
 
 
     @Override

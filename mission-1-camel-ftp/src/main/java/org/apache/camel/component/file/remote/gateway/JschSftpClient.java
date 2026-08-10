@@ -3,6 +3,7 @@ package org.apache.camel.component.file.remote.gateway;
 import com.jcraft.jsch.*;
 import org.apache.camel.LoggingLevel;
 
+import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.util.HomeHelper;
@@ -39,38 +40,11 @@ public class JschSftpClient {
         this.proxy = proxy;
     }
 
-    // Методы создания и конфигурирования channel
-
-
-    public void channelSetBulkRequests(Integer bulkRequests) throws SftpClientException {
-        if (bulkRequests != null) {
-            LOG.trace("configuring channel to use up to {} bulk request(s)", bulkRequests);
-            try {
-                channel.setBulkRequests(bulkRequests);
-            } catch (JSchException e) {
-                throw new SftpClientException("Ошибка установки количества одновременных запросов.", e);
-            }
-        }
-    }
-
     public boolean isConnectedChannel() {
         return channel != null && channel.isConnected();
     }
 
-    public void channelForceDisconnect() {
-        try {
-            forceDisconnectSession();
-            if (channel != null) {
-                channel.disconnect();
-            }
-        } finally {
-            // ensure these
-            channel = null;
-
-        }
-    }
-
-    //методы работы с channel
+    //методы работы sftp
     public void channelRm(String name) throws SftpClientException {
         try {
             channel.rm(name);
@@ -156,9 +130,6 @@ public class JschSftpClient {
         }
     }
 
-
-
-
     public void channelGet(String remoteName, OutputStream os) throws SftpClientException {
         try {
             channel.get(remoteName, os);
@@ -166,7 +137,6 @@ public class JschSftpClient {
             generateCommandException("get", e);
         }
     }
-
 
     public InputStream channelGet(String remoteName) throws SftpClientException {
         try {
@@ -176,32 +146,7 @@ public class JschSftpClient {
         }
     }
 
-    public void disconnectSftp() {
-        disconnectSession();
-        disconnectChannel();
-    }
-
-    public boolean isConnected(){
-        return isConnectedSession() && isConnectedChannel();
-    }
-
-    public void forceDisconnectSession() {
-        if (session != null) {
-            session.disconnect();
-        }
-        session = null;
-    }
-
-    public boolean sessionSendKeepAliveMsg() {
-        try {
-            session.sendKeepAliveMsg();
-            return true;
-        } catch (Exception e) {
-            LOG.debug("SFTP session was closed. Ignoring this exception.", e);
-            return false;
-        }
-    }
-
+    //инициализация
     public void initSftpClient(JschSetup jschSetup) {
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
@@ -275,7 +220,7 @@ public class JschSftpClient {
         if (isNotEmpty(jschSetup.sftpConfig().getPrivateKeyPassphrase())) {
             passphrase = jschSetup.sftpConfig().getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
         }
-        if (jschSetup.privateKey() != null){
+        if (jschSetup.privateKey() != null) {
             configureJSchIdentity("ID", jschSetup.privateKey(), jschSetup.certData(), passphrase);
         }
         if (jschSetup.knownHosts() != null) {
@@ -287,8 +232,71 @@ public class JschSftpClient {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Connected to {}", jschSetup.sftpConfig().remoteServerInformation());
         }
+
+        Integer bulkRequests = jschSetup.sftpConfig().getBulkRequests();
+        try {
+
+            channelSetBulkRequests(bulkRequests);
+        }catch (SftpClientException e) {
+            throw new GenericFileOperationFailedException("Failed to configure number of bulk requests", e);
+        }
+
     }
 
+
+    //Запрос состояние
+    public boolean isConnected() {
+        return isConnectedSession() && isConnectedChannel();
+    }
+
+    //Изменение состояния
+    public void disconnectSftp() {
+        disconnectSession();
+        disconnectChannel();
+    }
+
+    public void channelForceDisconnect() {
+        try {
+            forceDisconnectSession();
+            if (channel != null) {
+                channel.disconnect();
+            }
+        } finally {
+            // ensure these
+            channel = null;
+
+        }
+    }
+
+
+    public boolean sessionSendKeepAliveMsg() {
+        try {
+            session.sendKeepAliveMsg();
+            return true;
+        } catch (Exception e) {
+            LOG.debug("SFTP session was closed. Ignoring this exception.", e);
+            return false;
+        }
+    }
+
+
+    //Приватные методы
+    private void channelSetBulkRequests(Integer bulkRequests) throws SftpClientException {
+        if (bulkRequests != null) {
+            LOG.trace("configuring channel to use up to {} bulk request(s)", bulkRequests);
+            try {
+                channel.setBulkRequests(bulkRequests);
+            } catch (JSchException e) {
+                throw new SftpClientException("Ошибка установки количества одновременных запросов.", e);
+            }
+        }
+    }
+    private void forceDisconnectSession() {
+        if (session != null) {
+            session.disconnect();
+        }
+        session = null;
+    }
 
     private void channelConnect() throws SftpClientException {
         try {
@@ -327,18 +335,20 @@ public class JschSftpClient {
         }
 
     }
+
     private void channelSetFilenameEncoding(Charset ch) {
         channel.setFilenameEncoding(ch);
     }
+
     private void disconnectChannel() {
         if (isConnectedChannel()) {
             channel.disconnect();
         }
     }
+
     private boolean isConnectedSession() {
         return session != null && session.isConnected();
     }
-
 
 
     private SftpClientException generateCommandException(String command, SftpException cause) throws SftpClientException {
@@ -351,7 +361,7 @@ public class JschSftpClient {
         }
     }
 
-    private void initSession( int connectTimeout) throws SftpClientException {
+    private void initSession(int connectTimeout) throws SftpClientException {
         if (session == null || !session.isConnected()) {
             LOG.trace("Session isn't connected, trying to recreate and connect.");
 
@@ -367,7 +377,7 @@ public class JschSftpClient {
                     session.connect();
                 }
             } catch (JSchException e) {
-                throw new SftpClientException("Ошибка создания соединения сессией",e);
+                throw new SftpClientException("Ошибка создания соединения сессией", e);
             }
         }
     }
@@ -377,7 +387,7 @@ public class JschSftpClient {
         try {
             this.session = sessionFactory.createSession(new SessionContext(jsch, sftpConfig, certKeyType, proxy));
         } catch (JSchException e) {
-            throw new SftpClientException("Ошибка создания сессии",e);
+            throw new SftpClientException("Ошибка создания сессии", e);
         }
 
         initSession(sftpConfig.getConnectTimeout());
@@ -431,8 +441,8 @@ public class JschSftpClient {
             throw new SftpClientException("Ошибка настройки известных хостов", e);
         }
     }
-    private static final class JSchLogger implements com.jcraft.jsch.Logger {
 
+    private static final class JSchLogger implements com.jcraft.jsch.Logger {
 
 
         private final LoggingLevel loggingLevel;
