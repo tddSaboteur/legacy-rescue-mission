@@ -177,7 +177,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private void tryConfigureBulkRequests() throws SftpClientException {
         Integer bulkRequests = endpoint.getConfiguration().getBulkRequests();
 
-        jschClient.chanenlSetBulkRequsets(bulkRequests);
+        jschClient.channelSetBulkRequests(bulkRequests);
     }
 
 
