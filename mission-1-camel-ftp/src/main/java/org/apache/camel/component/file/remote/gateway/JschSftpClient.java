@@ -297,7 +297,7 @@ public class JschSftpClient {
 
 
     //методы JSch
-    public void initSftp(JschSetup jschSetup) {
+    public void initSftpClient(JschSetup jschSetup) {
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
         setJSchGlobalCiphersAndKex(jschSetup.sftpConfig().getCiphers(), jschSetup.sftpConfig().getKeyExchangeProtocols());

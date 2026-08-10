@@ -228,7 +228,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         }
 
-        jschClient.initSftp(new JschSetup( sftpConfig, certData, privateKey, knownHostIS,certKeyType));
+        jschClient.initSftpClient(new JschSetup( sftpConfig, certData, privateKey, knownHostIS,certKeyType));
     }
 
 
