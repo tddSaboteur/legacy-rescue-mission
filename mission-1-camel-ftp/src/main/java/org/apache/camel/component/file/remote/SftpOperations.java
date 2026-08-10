@@ -155,7 +155,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             if (!jschClient.isConnectedChannel()) {
                 initialiseJsch(payload.configuration);
-
             }
         } catch ( SftpClientException e) {
             payload.exception = e;
@@ -229,16 +228,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         }
 
-        jschClient.createJsch(new JschSetup( sftpConfig, certData, privateKey, knownHostIS));
-        jschClient.createSession(sftpConfig, certKeyType);
-        LOG.trace("Channel isn't connected, trying to recreate and connect.");
-        jschClient.openChannel(endpoint.getConfiguration().getFilenameEncoding(), endpoint.getConfiguration().getConnectTimeout());
-
-
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Connected to {}", sftpConfig.remoteServerInformation());
-        }
+        jschClient.initSftp(new JschSetup( sftpConfig, certData, privateKey, knownHostIS,certKeyType));
     }
 
 
@@ -306,7 +296,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     public boolean isConnected() throws GenericFileOperationFailedException {
         lock.lock();
         try {
-            return jschClient.isConnectedSession() && jschClient.isConnectedChannel();
+            return jschClient.isConnected();
         } finally {
             lock.unlock();
         }

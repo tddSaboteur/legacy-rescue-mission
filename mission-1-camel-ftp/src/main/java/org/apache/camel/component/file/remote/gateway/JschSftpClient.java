@@ -35,13 +35,12 @@ public class JschSftpClient {
     public JschSftpClient() {
     }
 
-    //todo Лучше вынести в параметры сесии
     public JschSftpClient(Proxy proxy) {
         this.proxy = proxy;
     }
 
     // Методы создания и конфигурирования channel
-    public void channelConnect() throws SftpClientException {
+    private void channelConnect() throws SftpClientException {
         try {
             channel.connect();
         } catch (JSchException e) {
@@ -49,7 +48,7 @@ public class JschSftpClient {
         }
     }
 
-    public void channelConnectWidthTimeout(int timeout) throws SftpClientException {
+    private void channelConnectWidthTimeout(int timeout) throws SftpClientException {
         try {
             channel.connect(timeout);
         } catch (JSchException e) {
@@ -69,7 +68,7 @@ public class JschSftpClient {
         }
     }
 
-    public void openChannel(String filenameEncoding, int connectTimeout) throws SftpClientException {
+    private void openChannel(String filenameEncoding, int connectTimeout) throws SftpClientException {
         try {
             channel = (ChannelSftp) session.openChannel("sftp");
         } catch (JSchException e) {
@@ -91,7 +90,7 @@ public class JschSftpClient {
 
     }
 
-    public void channelSetFilenameEncoding(Charset ch) {
+    private void channelSetFilenameEncoding(Charset ch) {
         channel.setFilenameEncoding(ch);
     }
 
@@ -226,8 +225,12 @@ public class JschSftpClient {
     }
 
 
+    public boolean isConnected(){
+        return isConnectedSession() && isConnectedChannel();
+    }
+
     // методы управления сессиями
-    public boolean isConnectedSession() {
+    private boolean isConnectedSession() {
         return session != null && session.isConnected();
     }
 
@@ -275,7 +278,7 @@ public class JschSftpClient {
         }
     }
 
-    public void createSession(SftpConfiguration sftpConfig, String certKeyType) throws SftpClientException {
+    private void createSession(SftpConfiguration sftpConfig, String certKeyType) throws SftpClientException {
         JschSessionFactory sessionFactory = new JschSessionFactory();
         try {
             this.session = sessionFactory.createSession(new SessionContext(jsch, sftpConfig, certKeyType, proxy));
@@ -291,7 +294,7 @@ public class JschSftpClient {
 
 
     //методы JSch
-    public void createJsch(JschSetup jschSetup) {
+    public void initSftp(JschSetup jschSetup) {
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
         setJSchGlobalCiphersAndKex(jschSetup.sftpConfig().getCiphers(), jschSetup.sftpConfig().getKeyExchangeProtocols());
@@ -369,6 +372,12 @@ public class JschSftpClient {
         }
         if (jschSetup.knownHosts() != null) {
             configureJSchKnownHost(jschSetup.knownHosts());
+        }
+        createSession(jschSetup.sftpConfig(), jschSetup.certKeyType());
+        LOG.trace("Channel isn't connected, trying to recreate and connect.");
+        openChannel(jschSetup.sftpConfig().getFilenameEncoding(), jschSetup.sftpConfig().getConnectTimeout());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Connected to {}", jschSetup.sftpConfig().remoteServerInformation());
         }
     }
 
