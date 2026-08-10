@@ -307,8 +307,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         lock.lock();
 
         try {
-            jschClient.disconnectSession();
-            jschClient.disconnectChannel();
+            jschClient.disconnectSftp();
         } finally {
             lock.unlock();
         }

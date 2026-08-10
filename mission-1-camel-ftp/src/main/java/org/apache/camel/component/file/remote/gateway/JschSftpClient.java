@@ -99,7 +99,7 @@ public class JschSftpClient {
     }
 
     //управление жизненым циклом channel
-    public void disconnectChannel() {
+    private void disconnectChannel() {
         if (isConnectedChannel()) {
             channel.disconnect();
         }
@@ -223,7 +223,10 @@ public class JschSftpClient {
             throw generateCommandException("get", e);
         }
     }
-
+    public void disconnectSftp() {
+        disconnectSession();
+        disconnectChannel();
+    }
 
     public boolean isConnected(){
         return isConnectedSession() && isConnectedChannel();
@@ -234,7 +237,7 @@ public class JschSftpClient {
         return session != null && session.isConnected();
     }
 
-    public void disconnectSession() {
+    private void disconnectSession() {
         if (session != null && session.isConnected()) {
             session.disconnect();
         }
