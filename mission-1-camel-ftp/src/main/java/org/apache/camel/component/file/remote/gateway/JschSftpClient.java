@@ -25,7 +25,7 @@ import java.util.Vector;
 
 import static org.apache.camel.util.ObjectHelper.isNotEmpty;
 
-public class JschSftpClient {
+public class JschSftpClient implements SftpClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(JschSftpClient.class);
     private Session session;
@@ -41,6 +41,7 @@ public class JschSftpClient {
     }
 
     //методы работы sftp
+    @Override
     public void channelRm(String name) throws SftpClientException {
         try {
             channel.rm(name);
@@ -49,6 +50,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelRename(String from, String to) throws SftpClientException {
         try {
             channel.rename(from, to);
@@ -57,6 +59,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelMkdir(String directory) throws SftpClientException {
         try {
             channel.mkdir(directory);
@@ -65,6 +68,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public String channelPwd() throws SftpClientException {
         try {
             return channel.pwd();
@@ -73,6 +77,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelCd(String path) throws SftpClientException {
         try {
             channel.cd(path);
@@ -81,6 +86,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public Vector<?> channelLs(String path) throws SftpClientException {
         try {
             return channel.ls(path);
@@ -94,6 +100,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelLsByBreakSelector(String directory) throws SftpClientException {
         try {
             channel.ls(directory, entry -> ChannelSftp.LsEntrySelector.BREAK);
@@ -102,6 +109,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelChmod(String directory, int permissions) throws SftpClientException {
         try {
             channel.chmod(permissions, directory);
@@ -110,6 +118,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelPutModeAppend(String targetName, InputStream is) throws SftpClientException {
         try {
             channel.put(is, targetName, ChannelSftp.APPEND);
@@ -118,6 +127,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelPut(String targetName, InputStream is) throws SftpClientException {
         try {
             channel.put(is, targetName);
@@ -126,6 +136,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public void channelGet(String remoteName, OutputStream os) throws SftpClientException {
         try {
             channel.get(remoteName, os);
@@ -134,6 +145,7 @@ public class JschSftpClient {
         }
     }
 
+    @Override
     public InputStream channelGet(String remoteName) throws SftpClientException {
         try {
             return channel.get(remoteName);
@@ -143,6 +155,7 @@ public class JschSftpClient {
     }
 
     //инициализация
+    @Override
     public void initSftpClient(JschSetup jschSetup) {
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
@@ -241,16 +254,19 @@ public class JschSftpClient {
 
 
     //Запрос состояние
+    @Override
     public boolean isConnected() {
         return isConnectedSession() && isConnectedChannel();
     }
 
     //Изменение состояния
+    @Override
     public void disconnectSftp() {
         disconnectSession();
         disconnectChannel();
     }
 
+    @Override
     public void channelForceDisconnect() {
         try {
             forceDisconnectSession();
@@ -264,7 +280,7 @@ public class JschSftpClient {
         }
     }
 
-
+    @Override
     public boolean sessionSendKeepAliveMsg() {
         try {
             session.sendKeepAliveMsg();
