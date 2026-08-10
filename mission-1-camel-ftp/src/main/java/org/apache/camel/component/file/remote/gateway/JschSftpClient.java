@@ -40,10 +40,6 @@ public class JschSftpClient {
         this.proxy = proxy;
     }
 
-    public boolean isConnectedChannel() {
-        return channel != null && channel.isConnected();
-    }
-
     //методы работы sftp
     public void channelRm(String name) throws SftpClientException {
         try {
@@ -281,6 +277,9 @@ public class JschSftpClient {
 
 
     //Приватные методы
+    private boolean isConnectedChannel() {
+        return channel != null && channel.isConnected();
+    }
     private void channelSetBulkRequests(Integer bulkRequests) throws SftpClientException {
         if (bulkRequests != null) {
             LOG.trace("configuring channel to use up to {} bulk request(s)", bulkRequests);

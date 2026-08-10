@@ -151,7 +151,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             LOG.trace("Reconnect attempt to {}", payload.configuration.remoteServerInformation());
         }
         try {
-            if (!jschClient.isConnectedChannel()) {
+            if (!jschClient.isConnected()) {
                 initialiseJsch(payload.configuration);
             }
         } catch (SftpClientException e) {
