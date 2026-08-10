@@ -140,8 +140,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                         payload.exception);
             }
 
-            configureBulkRequests();
-
             return true;
         } finally {
             lock.unlock();
