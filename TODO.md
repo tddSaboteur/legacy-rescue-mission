@@ -32,8 +32,6 @@
 
 ## 🎯 В процессе (Текущий рубеж)
 - [ ] **Вылазка #7: Пишем первый Unit на SftpOperations полировка API**
-  * [ ] Минимизировать взаимодействие SftpOperations с JschSftpClient, что бы SftpOperations не знал внутренней реализации JschSftpClient
-  * [ ] Выделить интерфейс SftpClient из оставшегося APi JschSftpClient
 
 
 ---
