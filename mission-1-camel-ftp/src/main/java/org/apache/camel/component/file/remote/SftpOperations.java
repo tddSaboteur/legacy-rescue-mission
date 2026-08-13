@@ -214,7 +214,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         }
 
-        jschClient.initSftpClient(new JschSetup(sftpConfig, certData, privateKey, knownHostIS, certKeyType));
+        jschClient.init(new JschSetup(sftpConfig, certData, privateKey, knownHostIS, certKeyType));
     }
 
 
@@ -301,7 +301,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void forceDisconnect() throws GenericFileOperationFailedException {
         lock.lock();
-        jschClient.channelForceDisconnect();
+        jschClient.forceDisconnect();
         lock.unlock();
     }
 
@@ -317,7 +317,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         try {
             LOG.debug("Deleting file: {}", name);
             reconnectIfNecessary(null);
-            jschClient.channelRm(name);
+            jschClient.rm(name);
             return true;
         } catch (SftpClientException e) {
             LOG.debug("Cannot delete file {}: {}", name, e.getMessage(), e);
@@ -367,10 +367,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 // maybe the full directory already exists
                 try {
                     if (cdCheck) {
-                        jschClient.channelCd(directory);
+                        jschClient.cd(directory);
                     } else {
                         // just do a fast listing
-                        jschClient.channelLsByBreakSelector(directory);
+                        jschClient.lsByBreakSelector(directory);
                     }
                     success = true;
                 } catch (SftpClientException e) {
@@ -381,7 +381,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 if (!success) {
                     LOG.debug("Trying to build remote directory: {}", directory);
                     try {
-                        jschClient.channelMkdir(directory);
+                        jschClient.mkdir(directory);
                         success = true;
                     } catch (SftpClientException e) {
                         // we are here if the server side doesn't create
@@ -432,7 +432,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 try {
                     LOG.trace("Trying to build remote directory by chunk: {}", directory);
 
-                    jschClient.channelMkdir(directory);
+                    jschClient.mkdir(directory);
                     success = true;
                 } catch (SftpClientException e) {
                     // ignore keep trying to create the rest of the path
@@ -454,7 +454,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         lock.lock();
         try {
             LOG.trace("getCurrentDirectory()");
-            String answer = jschClient.channelPwd();
+            String answer = jschClient.pwd();
             LOG.trace("Current dir: {}", answer);
             return answer;
         } catch (SftpClientException e) {
@@ -543,7 +543,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
         LOG.trace("Changing directory: {}", path);
         try {
-            jschClient.channelCd(path);
+            jschClient.cd(path);
         } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot change directory to: " + path, e);
         }
@@ -589,7 +589,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 path = ".";
             }
 
-            Vector<?> files = jschClient.channelLs(path);
+            Vector<?> files = jschClient.ls(path);
 
             return files.stream()
                     .map(f -> new SftpRemoteFileJCraft((ChannelSftp.LsEntry) f))
@@ -665,7 +665,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             }
 
             // use input stream which works with Apache SSHD used for testing
-            InputStream is = jschClient.channelGet(remoteName);
+            InputStream is = jschClient.get(remoteName);
 
             if (endpoint.getConfiguration().isStreamDownload()) {
                 target.setBody(is);
@@ -770,7 +770,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 remoteName = FileUtil.stripPath(name);
             }
 
-            jschClient.channelGet(remoteName, os);
+            jschClient.get(remoteName, os);
 
             // change back to current directory if we changed directory
             if (currentDir != null) {
@@ -901,11 +901,11 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             LOG.debug("About to store file: {} using stream: {}", targetName, is);
             if (endpoint.getFileExist() == GenericFileExist.Append) {
                 LOG.trace("Client appendFile: {}", targetName);
-                jschClient.channelPutModeAppend(targetName, is);
+                jschClient.putModeAppend(targetName, is);
             } else {
                 LOG.trace("Client storeFile: {}", targetName);
                 // override is default
-                jschClient.channelPut(targetName, is);
+                jschClient.put(targetName, is);
             }
             if (LOG.isDebugEnabled()) {
                 long time = watch.taken();
@@ -919,7 +919,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 // parse to int using 8bit mode
                 int permissions = Integer.parseInt(mode, 8);
                 LOG.trace("Setting chmod: {} on file: {}", mode, targetName);
-                jschClient.channelChmod(targetName, permissions);
+                jschClient.chmod(targetName, permissions);
             }
 
             createResultHeadersFromExchange(null, exchange);
@@ -941,7 +941,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         lock.lock();
         ByteArrayInputStream bis = new ByteArrayInputStream(payload.getBytes());
         try {
-            jschClient.channelPut(name, bis);
+            jschClient.put(name, bis);
             return true;
         } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot store file: " + name, e);
@@ -969,7 +969,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
             try {
                 @SuppressWarnings("rawtypes")
-                List files = jschClient.channelLs(directory);
+                List files = jschClient.ls(directory);
                 // can return either null or an empty list depending on FTP servers
                 if (files == null) {
                     return false;
@@ -997,7 +997,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         LOG.trace("fastExistsFile({})", name);
         try {
             @SuppressWarnings("rawtypes")
-            List files = jschClient.channelLs(name);
+            List files = jschClient.ls(name);
             if (files == null) {
                 return false;
             }
@@ -1012,7 +1012,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         lock.lock();
         try {
             if (isConnected()) {
-                return jschClient.sessionSendKeepAliveMsg();
+                return jschClient.sendKeepAliveMsg();
             }
             return false;
         } finally {
@@ -1054,7 +1054,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             // parse to int using 8bit mode
             int permissions = Integer.parseInt(chmodDirectory, 8);
             try {
-                jschClient.channelChmod(directory, permissions);
+                jschClient.chmod(directory, permissions);
             } catch (SftpClientException e) {
                 throw new GenericFileOperationFailedException("Cannot set permission on directory: " + directory, e);
             }

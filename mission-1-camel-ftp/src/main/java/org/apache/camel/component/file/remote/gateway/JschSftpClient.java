@@ -42,7 +42,7 @@ public class JschSftpClient implements SftpClient {
 
     //методы работы sftp
     @Override
-    public void channelRm(String name) throws SftpClientException {
+    public void rm(String name) throws SftpClientException {
         try {
             channel.rm(name);
         } catch (SftpException e) {
@@ -60,7 +60,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelMkdir(String directory) throws SftpClientException {
+    public void mkdir(String directory) throws SftpClientException {
         try {
             channel.mkdir(directory);
         } catch (SftpException e) {
@@ -69,7 +69,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public String channelPwd() throws SftpClientException {
+    public String pwd() throws SftpClientException {
         try {
             return channel.pwd();
         } catch (SftpException e) {
@@ -78,7 +78,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelCd(String path) throws SftpClientException {
+    public void cd(String path) throws SftpClientException {
         try {
             channel.cd(path);
         } catch (SftpException e) {
@@ -87,7 +87,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public Vector<?> channelLs(String path) throws SftpClientException {
+    public Vector<?> ls(String path) throws SftpClientException {
         try {
             return channel.ls(path);
         } catch (SftpException e) {
@@ -101,7 +101,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelLsByBreakSelector(String directory) throws SftpClientException {
+    public void lsByBreakSelector(String directory) throws SftpClientException {
         try {
             channel.ls(directory, entry -> ChannelSftp.LsEntrySelector.BREAK);
         } catch (SftpException e) {
@@ -110,7 +110,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelChmod(String directory, int permissions) throws SftpClientException {
+    public void chmod(String directory, int permissions) throws SftpClientException {
         try {
             channel.chmod(permissions, directory);
         } catch (SftpException e) {
@@ -119,7 +119,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelPutModeAppend(String targetName, InputStream is) throws SftpClientException {
+    public void putModeAppend(String targetName, InputStream is) throws SftpClientException {
         try {
             channel.put(is, targetName, ChannelSftp.APPEND);
         } catch (SftpException e) {
@@ -128,7 +128,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelPut(String targetName, InputStream is) throws SftpClientException {
+    public void put(String targetName, InputStream is) throws SftpClientException {
         try {
             channel.put(is, targetName);
         } catch (SftpException e) {
@@ -137,7 +137,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelGet(String remoteName, OutputStream os) throws SftpClientException {
+    public void get(String remoteName, OutputStream os) throws SftpClientException {
         try {
             channel.get(remoteName, os);
         } catch (SftpException e) {
@@ -146,7 +146,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public InputStream channelGet(String remoteName) throws SftpClientException {
+    public InputStream get(String remoteName) throws SftpClientException {
         try {
             return channel.get(remoteName);
         } catch (SftpException e) {
@@ -156,7 +156,7 @@ public class JschSftpClient implements SftpClient {
 
     //инициализация
     @Override
-    public void initSftpClient(JschSetup jschSetup) {
+    public void init(JschSetup jschSetup) {
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
         setJSchGlobalCiphersAndKex(jschSetup.sftpConfig().getCiphers(), jschSetup.sftpConfig().getKeyExchangeProtocols());
@@ -267,7 +267,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public void channelForceDisconnect() {
+    public void forceDisconnect() {
         try {
             forceDisconnectSession();
             if (channel != null) {
@@ -281,7 +281,7 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public boolean sessionSendKeepAliveMsg() {
+    public boolean sendKeepAliveMsg() {
         try {
             session.sendKeepAliveMsg();
             return true;

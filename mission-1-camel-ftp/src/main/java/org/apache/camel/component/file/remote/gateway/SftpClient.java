@@ -8,32 +8,32 @@ import java.util.Vector;
 
 public interface SftpClient {
     //методы работы sftp
-    void channelRm(String name) throws SftpClientException;
+    void rm(String name) throws SftpClientException;
 
     void channelRename(String from, String to) throws SftpClientException;
 
-    void channelMkdir(String directory) throws SftpClientException;
+    void mkdir(String directory) throws SftpClientException;
 
-    String channelPwd() throws SftpClientException;
+    String pwd() throws SftpClientException;
 
-    void channelCd(String path) throws SftpClientException;
+    void cd(String path) throws SftpClientException;
 
-    Vector<?> channelLs(String path) throws SftpClientException;
+    Vector<?> ls(String path) throws SftpClientException;
 
-    void channelLsByBreakSelector(String directory) throws SftpClientException;
+    void lsByBreakSelector(String directory) throws SftpClientException;
 
-    void channelChmod(String directory, int permissions) throws SftpClientException;
+    void chmod(String directory, int permissions) throws SftpClientException;
 
-    void channelPutModeAppend(String targetName, InputStream is) throws SftpClientException;
+    void putModeAppend(String targetName, InputStream is) throws SftpClientException;
 
-    void channelPut(String targetName, InputStream is) throws SftpClientException;
+    void put(String targetName, InputStream is) throws SftpClientException;
 
-    void channelGet(String remoteName, OutputStream os) throws SftpClientException;
+    void get(String remoteName, OutputStream os) throws SftpClientException;
 
-    InputStream channelGet(String remoteName) throws SftpClientException;
+    InputStream get(String remoteName) throws SftpClientException;
 
     //инициализация
-    void initSftpClient(JschSetup jschSetup);
+    void init(JschSetup jschSetup);
 
     //Запрос состояние
     boolean isConnected();
@@ -41,7 +41,7 @@ public interface SftpClient {
     //Изменение состояния
     void disconnectSftp();
 
-    void channelForceDisconnect();
+    void forceDisconnect();
 
-    boolean sessionSendKeepAliveMsg();
+    boolean sendKeepAliveMsg();
 }
