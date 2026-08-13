@@ -207,6 +207,17 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <phase>test</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.camel</groupId>
                 <artifactId>camel-package-maven-plugin</artifactId>
                 <version>4.21.0</version>
@@ -214,10 +225,6 @@
                     <execution>
                         <id>generate</id>
                         <phase>none</phase> <!-- Отключает выполнение плагина -->
-                    </execution>
-                    <execution>
-                        <id>validate</id>
-                        <phase>none</phase> <!-- Отключает валидацию, если она унаследована -->
                     </execution>
                 </executions>
             </plugin>
