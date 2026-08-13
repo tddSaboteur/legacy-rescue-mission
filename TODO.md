@@ -28,11 +28,13 @@
 - [x] **Вылазка #6: Выделение интерфейса SftpClient**
   * [x] Минимизировать взаимодействие SftpOperations с JschSftpClient, что бы SftpOperations не знал внутренней реализации JschSftpClient.
   * [x] Выделить интерфейс SftpClient из оставшегося APi JschSftpClient.
+  * *Точка фиксации:* Тег `v1.2.0-client-api-stabilized`.
 
 - [x] **Вылазка #7: Пишем первый Unit на SftpOperations**
   * [x] Убрать упоминание о внутренней реализации JschSftpClient в его методах.
   * [x] Сделать первый примитивный тест на SftpOperations.connect при подключенном клиенте.
   * [x] Восстановить отключенный запуск тестов mvn:verify.
+  * *Точка фиксации:* Тег `v1.3.0-first-unit-test`
 ---
 
 ## 🎯 В процессе (Текущий рубеж)
