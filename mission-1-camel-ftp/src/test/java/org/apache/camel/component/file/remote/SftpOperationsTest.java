@@ -42,15 +42,35 @@ class SftpOperationsTest {
         assertTrue(sftp.connect(configuration, null));
         verify(sftpClient).init(any());
     }
+
     @Test
-    public void disconnect_WhenClientIsAlreadyConnected_ShouldReturnOk() {
+    public void disconnect_MustCallClientMethod() {
         sftp.disconnect();
         verify(sftpClient).disconnectSftp();
     }
 
     @Test
-    public void forceDisconnect_WhenClientIsAlreadyConnected_ShouldReturnOk(){
+    public void forceDisconnectTest_MustCallClientMethod(){
         sftp.forceDisconnect();
         verify(sftpClient).forceDisconnect();
+    }
+    @Test
+    public void deleteFile_WhenClientIsAlreadyConnected_ShouldReturnOk() {
+        String file = "file";
+        sftp.setEndpoint(endpoint);
+        when(sftpClient.isConnected()).thenReturn(true);
+        assertTrue(sftp.deleteFile(file));
+        verify(sftpClient).rm(file);
+    }
+    @Test
+    public void deleteFile_WhenClientIsNotConnected_ShouldReturnOk() {
+        String file = "file";
+        sftp.setEndpoint(endpoint);
+
+        when(endpoint.getConfiguration()).thenReturn(configuration);
+        when(sftpClient.isConnected()).thenReturn(false);
+
+        assertTrue(sftp.deleteFile(file));
+        verify(sftpClient).rm(file);
     }
 }
