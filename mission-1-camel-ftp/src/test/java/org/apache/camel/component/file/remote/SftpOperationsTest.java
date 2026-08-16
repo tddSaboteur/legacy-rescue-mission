@@ -7,8 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,6 +36,7 @@ class SftpOperationsTest {
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTED);
         assertTrue(sftp.connect(null, null));
     }
+
     @Test
     public void connect_WhenClientIsNotConnected_ShouldReturnOk() {
         sftp.setEndpoint(endpoint);
@@ -44,10 +44,12 @@ class SftpOperationsTest {
         assertTrue(sftp.connect(configuration, null));
         verify(sftpClient).init(any());
     }
+
     @Test
     public void isConnected_WhenClientIsNotConnected_ShouldReturnFalse() {
         assertFalse(sftp.isConnected());
     }
+
     @Test
     public void isConnected_WhenClientIsAlreadyConnected_ShouldReturnFalse() {
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTED);
@@ -61,10 +63,11 @@ class SftpOperationsTest {
     }
 
     @Test
-    public void forceDisconnectTest_MustCallClientMethod(){
+    public void forceDisconnectTest_MustCallClientMethod() {
         sftp.forceDisconnect();
         verify(sftpClient).forceDisconnect();
     }
+
     @Test
     public void deleteFile_WhenClientIsAlreadyConnected_ShouldReturnOk() {
 
@@ -87,18 +90,34 @@ class SftpOperationsTest {
     }
 
     @Test
-    public void renameFile_WhenClientIsNotConnected_ShouldReturnOk(){
+    public void renameFile_WhenClientIsNotConnected_ShouldReturnOk() {
         sftp.setEndpoint(endpoint);
         when(endpoint.getConfiguration()).thenReturn(configuration);
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_NOT_CONNECTED);
-        sftp.renameFile("FILENAME_FROM","FILENAME_TO");
-        verify(sftpClient).channelRename("FILENAME_FROM","FILENAME_TO");
+        sftp.renameFile("FILENAME_FROM", "FILENAME_TO");
+        verify(sftpClient).channelRename("FILENAME_FROM", "FILENAME_TO");
     }
 
     @Test
-    public void renameFile_WhenClientIsAlreadyConnected_ShouldReturnOk(){
+    public void renameFile_WhenClientIsAlreadyConnected_ShouldReturnOk() {
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTED);
-        sftp.renameFile("FILENAME_FROM","FILENAME_TO");
-        verify(sftpClient).channelRename("FILENAME_FROM","FILENAME_TO");
+        sftp.renameFile("FILENAME_FROM", "FILENAME_TO");
+        verify(sftpClient).channelRename("FILENAME_FROM", "FILENAME_TO");
+    }
+
+    @Test
+    //todo пока оставим там, далее нужно проверить логику
+    public void buildDirectory() {
+        sftp.setEndpoint(endpoint);
+        when(endpoint.getConfiguration()).thenReturn(configuration);
+        sftp.buildDirectory("DIRECTORY", false);
+    }
+
+    @Test
+    public void getCurrentDirectory() {
+        String currentDirectory = "CURRENT_DIRECTORY";
+        when(sftpClient.pwd()).thenReturn(currentDirectory);
+
+        assertEquals(sftp.getCurrentDirectory(), currentDirectory);
     }
 }
