@@ -42,4 +42,15 @@ class SftpOperationsTest {
         assertTrue(sftp.connect(configuration, null));
         verify(sftpClient).init(any());
     }
+    @Test
+    public void disconnect_WhenClientIsAlreadyConnected_ShouldReturnOk() {
+        sftp.disconnect();
+        verify(sftpClient).disconnectSftp();
+    }
+
+    @Test
+    public void forceDisconnect_WhenClientIsAlreadyConnected_ShouldReturnOk(){
+        sftp.forceDisconnect();
+        verify(sftpClient).forceDisconnect();
+    }
 }
