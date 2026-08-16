@@ -1,6 +1,5 @@
 package org.apache.camel.component.file.remote;
 
-import org.apache.camel.component.file.GenericFileEndpoint;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +14,9 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SftpOperationsTest {
+    private static final String FILE_TO_DELETE = "file";
+    private final boolean CLIENT_IS_ALREADY_CONNECTIONS = true;
+    private final boolean CLIENT_IS_NOT_CONNECTIONS = false;
 
     private SftpOperations sftp;
     @Mock
@@ -24,7 +26,6 @@ class SftpOperationsTest {
     @Mock
     SftpConfiguration configuration;
 
-
     @BeforeEach
     public void setUp() {
         sftp = new SftpOperations(sftpClient);
@@ -32,13 +33,13 @@ class SftpOperationsTest {
 
     @Test
     public void connect_WhenClientIsAlreadyConnected_ShouldReturnOk() {
-        when(sftpClient.isConnected()).thenReturn(true);
+        when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTIONS);
         assertTrue(sftp.connect(null, null));
     }
     @Test
     public void connect_WhenClientIsNotConnected_ShouldReturnOk() {
         sftp.setEndpoint(endpoint);
-        when(sftpClient.isConnected()).thenReturn(false);
+        when(sftpClient.isConnected()).thenReturn(CLIENT_IS_NOT_CONNECTIONS);
         assertTrue(sftp.connect(configuration, null));
         verify(sftpClient).init(any());
     }
@@ -56,21 +57,21 @@ class SftpOperationsTest {
     }
     @Test
     public void deleteFile_WhenClientIsAlreadyConnected_ShouldReturnOk() {
-        String file = "file";
+
         sftp.setEndpoint(endpoint);
-        when(sftpClient.isConnected()).thenReturn(true);
-        assertTrue(sftp.deleteFile(file));
-        verify(sftpClient).rm(file);
+        when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTIONS);
+        assertTrue(sftp.deleteFile(FILE_TO_DELETE));
+        verify(sftpClient).rm(FILE_TO_DELETE);
     }
     @Test
     public void deleteFile_WhenClientIsNotConnected_ShouldReturnOk() {
-        String file = "file";
+
         sftp.setEndpoint(endpoint);
 
         when(endpoint.getConfiguration()).thenReturn(configuration);
-        when(sftpClient.isConnected()).thenReturn(false);
+        when(sftpClient.isConnected()).thenReturn(CLIENT_IS_NOT_CONNECTIONS);
 
-        assertTrue(sftp.deleteFile(file));
-        verify(sftpClient).rm(file);
+        assertTrue(sftp.deleteFile(FILE_TO_DELETE));
+        verify(sftpClient).rm(FILE_TO_DELETE);
     }
 }
