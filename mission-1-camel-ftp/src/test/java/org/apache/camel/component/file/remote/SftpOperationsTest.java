@@ -85,4 +85,20 @@ class SftpOperationsTest {
         assertTrue(sftp.deleteFile(FILE_TO_DELETE));
         verify(sftpClient).rm(FILE_TO_DELETE);
     }
+
+    @Test
+    public void renameFile_WhenClientIsNotConnected_ShouldReturnOk(){
+        sftp.setEndpoint(endpoint);
+        when(endpoint.getConfiguration()).thenReturn(configuration);
+        when(sftpClient.isConnected()).thenReturn(CLIENT_IS_NOT_CONNECTED);
+        sftp.renameFile("FILENAME_FROM","FILENAME_TO");
+        verify(sftpClient).channelRename("FILENAME_FROM","FILENAME_TO");
+    }
+
+    @Test
+    public void renameFile_WhenClientIsAlreadyConnected_ShouldReturnOk(){
+        when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTED);
+        sftp.renameFile("FILENAME_FROM","FILENAME_TO");
+        verify(sftpClient).channelRename("FILENAME_FROM","FILENAME_TO");
+    }
 }
