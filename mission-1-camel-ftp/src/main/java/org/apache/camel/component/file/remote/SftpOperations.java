@@ -1060,6 +1060,4 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             }
         }
     }
-
-
 }
