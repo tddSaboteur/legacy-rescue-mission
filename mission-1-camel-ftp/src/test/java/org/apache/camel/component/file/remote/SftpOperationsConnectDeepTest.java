@@ -75,7 +75,6 @@ class SftpOperationsConnectDeepTest {
         public TestSftpOperations(SftpClient client){
             super(sftpClient);
         }
-
         @Override
         protected byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
             return new byte[0];
@@ -83,6 +82,11 @@ class SftpOperationsConnectDeepTest {
 
         @Override
         protected byte[] loadCertFromFile(String filePath) {
+            return new byte[0];
+        }
+
+        @Override
+        protected byte[] loadCertFromUri(String certUri) {
             return new byte[0];
         }
     }
