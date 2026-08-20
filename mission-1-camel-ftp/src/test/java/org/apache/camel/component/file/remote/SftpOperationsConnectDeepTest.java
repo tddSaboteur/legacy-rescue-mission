@@ -1,7 +1,6 @@
 package org.apache.camel.component.file.remote;
 
-import org.apache.camel.Endpoint;
-import org.apache.camel.component.file.GenericFileEndpoint;
+
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
@@ -56,4 +55,11 @@ class SftpOperationsConnectDeepTest {
 
         verify(sftpClient, times(4)).init(any());
     }
+
+    @Test
+    public void connect_widthPrivateKeyNotNull_() {
+        when(configuration.getPrivateKeyUri()).thenReturn("My private key path");
+        sftpOperations.connect(configuration, null);
+    }
+
 }
