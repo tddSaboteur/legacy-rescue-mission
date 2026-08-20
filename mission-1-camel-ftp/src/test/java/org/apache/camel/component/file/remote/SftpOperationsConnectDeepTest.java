@@ -76,7 +76,7 @@ class SftpOperationsConnectDeepTest {
 
     @Test
     public void connect_widthKnownHostsNotNull() {
-        when(configuration.getKnownHosts()).thenReturn(new byte[1]);
+        when(configuration.getKnownHostsUri()).thenReturn("uri");
         sftpOperations.connect(configuration, null);
     }
 
