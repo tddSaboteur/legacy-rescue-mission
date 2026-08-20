@@ -33,14 +33,27 @@ class SftpOperationsConnectDeepTest {
 
 
     @Test
-    public void connect_widthRetryConfiguration_shouldTryToConnect(){
+    public void connect_widthRetryConfigurationIfException_shouldTryToConnect() {
         when(endpoint.getMaximumReconnectAttempts()).thenReturn(10);
         doThrow(SftpClientException.class)
                 .when(sftpClient).init(any());
 
-        assertThrows(GenericFileOperationFailedException.class,() -> sftpOperations.connect(configuration,null));
+        assertThrows(GenericFileOperationFailedException.class, () -> sftpOperations.connect(configuration, null));
 
-        verify(sftpClient,times(10)).init(any());
+        verify(sftpClient, times(10)).init(any());
     }
 
+    @Test
+    public void connect_widthRetryConfiguration_shouldTryToConnect() {
+        when(endpoint.getMaximumReconnectAttempts()).thenReturn(10);
+        doThrow(SftpClientException.class)
+                .doThrow(SftpClientException.class)
+                .doThrow(SftpClientException.class)
+                .doNothing()
+                .when(sftpClient).init(any());
+
+        sftpOperations.connect(configuration, null);
+
+        verify(sftpClient, times(4)).init(any());
+    }
 }
