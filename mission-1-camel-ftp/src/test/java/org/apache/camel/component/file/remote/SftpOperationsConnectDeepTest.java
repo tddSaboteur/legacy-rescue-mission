@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -99,6 +101,11 @@ class SftpOperationsConnectDeepTest {
         @Override
         protected byte[] loadCertFromUri(String certUri) {
             return new byte[0];
+        }
+
+        @Override
+        public InputStream loadKnownHostsIS(String knownHostsUri) {
+            return InputStream.nullInputStream();
         }
     }
 
