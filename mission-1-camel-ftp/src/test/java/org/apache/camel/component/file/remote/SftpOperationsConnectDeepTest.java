@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Arrays;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -61,6 +63,12 @@ class SftpOperationsConnectDeepTest {
         when(configuration.getPrivateKeyUri()).thenReturn("My private key path");
         sftpOperations.connect(configuration, null);
     }
+    @Test
+    public void connect_widthCertificateFileNotNull() {
+        when(configuration.getCertFile()).thenReturn("My private key path");
+        sftpOperations.connect(configuration, null);
+    }
+
 
     //фиксируем запахи
     class TestSftpOperations extends SftpOperations{
@@ -70,7 +78,12 @@ class SftpOperationsConnectDeepTest {
 
         @Override
         protected byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
-            return new byte[1];
+            return new byte[0];
+        }
+
+        @Override
+        protected byte[] loadCertFromFile(String filePath) {
+            return new byte[0];
         }
     }
 

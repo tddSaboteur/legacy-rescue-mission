@@ -230,14 +230,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
      */
     private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
         if (isNotEmpty(config.getCertFile())) {
-            try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
-                    endpoint.getCamelContext(), "file:" + config.getCertFile())) {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                IOHelper.copyAndCloseInput(is, bos);
-                return bos.toByteArray();
-            } catch (IOException e) {
-                throw new SftpClientException("Cannot read certificate file: " + config.getCertFile(), e);
-            }
+            return loadCertFromFile(config.getCertFile());
         }
         if (isNotEmpty(config.getCertUri())) {
             try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
@@ -253,6 +246,17 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             return config.getCertBytes();
         }
         return null;
+    }
+
+    protected byte[] loadCertFromFile(String filePath) {
+        try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
+                endpoint.getCamelContext(), "file:" + filePath)) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            IOHelper.copyAndCloseInput(is, bos);
+            return bos.toByteArray();
+        } catch (IOException e) {
+            throw new SftpClientException("Cannot read certificate file: " + filePath, e);
+        }
     }
 
     /**
