@@ -57,7 +57,7 @@ class SftpOperationsConnectDeepTest {
     }
 
     @Test
-    public void connect_widthPrivateKeyNotNull_() {
+    public void connect_widthPrivateKeyNotNull() {
         when(configuration.getPrivateKeyUri()).thenReturn("My private key path");
         sftpOperations.connect(configuration, null);
     }
