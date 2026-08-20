@@ -74,6 +74,12 @@ class SftpOperationsConnectDeepTest {
         sftpOperations.connect(configuration, null);
     }
 
+    @Test
+    public void connect_widthKnownHostsNotNull() {
+        when(configuration.getKnownHosts()).thenReturn(new byte[1]);
+        sftpOperations.connect(configuration, null);
+    }
+
 
     //фиксируем запахи
     class TestSftpOperations extends SftpOperations{
