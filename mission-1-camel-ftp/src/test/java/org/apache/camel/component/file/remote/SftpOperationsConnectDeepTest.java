@@ -68,6 +68,11 @@ class SftpOperationsConnectDeepTest {
         when(configuration.getCertFile()).thenReturn("My private key path");
         sftpOperations.connect(configuration, null);
     }
+    @Test
+    public void connect_widthCertificateUriNotNull() {
+        when(configuration.getCertUri()).thenReturn("My private key path");
+        sftpOperations.connect(configuration, null);
+    }
 
 
     //фиксируем запахи
