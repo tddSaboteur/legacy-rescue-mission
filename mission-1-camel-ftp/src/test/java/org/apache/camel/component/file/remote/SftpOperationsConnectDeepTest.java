@@ -26,7 +26,7 @@ class SftpOperationsConnectDeepTest {
 
     @BeforeEach
     void setUp() {
-        sftpOperations = new SftpOperations(sftpClient);
+        sftpOperations = new TestSftpOperations(sftpClient);
         sftpOperations.setEndpoint(endpoint);
     }
 
@@ -60,6 +60,18 @@ class SftpOperationsConnectDeepTest {
     public void connect_widthPrivateKeyNotNull() {
         when(configuration.getPrivateKeyUri()).thenReturn("My private key path");
         sftpOperations.connect(configuration, null);
+    }
+
+    //фиксируем запахи
+    class TestSftpOperations extends SftpOperations{
+        public TestSftpOperations(SftpClient client){
+            super(sftpClient);
+        }
+
+        @Override
+        protected byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
+            return new byte[1];
+        }
     }
 
 }
