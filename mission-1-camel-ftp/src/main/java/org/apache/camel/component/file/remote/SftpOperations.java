@@ -46,6 +46,7 @@ import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.component.file.remote.gateway.JschSetup;
 import org.apache.camel.component.file.remote.gateway.JschSftpClient;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
+import org.apache.camel.component.file.remote.gateway.SftpSecurityProvider;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
@@ -74,6 +75,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     private final Lock lock = new ReentrantLock();
     private SftpClient jschClient;
+    private SftpSecurityProvider securityProvider;
 
     private static class TaskPayload {
         final RemoteFileConfiguration configuration;
@@ -85,11 +87,11 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
     public SftpOperations() {
-        this(new JschSftpClient());
+        this(new JschSftpClient(),null);
     }
 
     /**
-     * @deprecated Используйте {@link #SftpOperations(SftpClient)} для явного
+     * @deprecated Используйте {@link #SftpOperations(SftpClient,SftpSecurityProvider)} для явного
      * внедрения зависимостей. Этот конструктор оставлен только для обратной
      * совместимости и legacy-кода.
      */
@@ -98,8 +100,9 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         this.jschClient = new JschSftpClient(proxy);
     }
 
-    public SftpOperations(SftpClient jschClient) {
+    public SftpOperations(SftpClient jschClient,SftpSecurityProvider securityProvider) {
         this.jschClient = jschClient;
+        this.securityProvider = securityProvider;
     }
 
     /**
@@ -109,6 +112,9 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void setEndpoint(GenericFileEndpoint<SftpRemoteFile> endpoint) {
         this.endpoint = (SftpEndpoint) endpoint;
+        if (securityProvider == null){
+            securityProvider = new SftpSecurityProvider(endpoint.getCamelContext());
+        }
     }
 
     @Override
@@ -236,7 +242,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
      */
     private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
         if (isNotEmpty(config.getCertFile())) {
-            return loadCertFromFile(config.getCertFile());
+            return securityProvider.loadCertFromFile(config.getCertFile());
         }
         if (isNotEmpty(config.getCertUri())) {
             return loadCertFromUri(config.getCertUri());
@@ -255,17 +261,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             return bos.toByteArray();
         } catch (IOException e) {
             throw new SftpClientException("Cannot read certificate resource: " + certUri, e);
-        }
-    }
-
-    protected byte[] loadCertFromFile(String filePath) {
-        try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
-                endpoint.getCamelContext(), "file:" + filePath)) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            IOHelper.copyAndCloseInput(is, bos);
-            return bos.toByteArray();
-        } catch (IOException e) {
-            throw new SftpClientException("Cannot read certificate file: " + filePath, e);
         }
     }
 

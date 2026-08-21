@@ -4,6 +4,7 @@ package org.apache.camel.component.file.remote;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
+import org.apache.camel.component.file.remote.gateway.SftpSecurityProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,10 +28,13 @@ class SftpOperationsConnectDeepTest {
     SftpConfiguration configuration;
     @Mock
     SftpClient sftpClient;
+    @Mock
+    SftpSecurityProvider securityProvider;
+
 
     @BeforeEach
     void setUp() {
-        sftpOperations = new TestSftpOperations(sftpClient);
+        sftpOperations = new TestSftpOperations();
         sftpOperations.setEndpoint(endpoint);
     }
 
@@ -85,16 +89,11 @@ class SftpOperationsConnectDeepTest {
 
     //фиксируем запахи
     class TestSftpOperations extends SftpOperations{
-        public TestSftpOperations(SftpClient client){
-            super(sftpClient);
+        public TestSftpOperations(){
+            super(sftpClient,securityProvider);
         }
         @Override
         protected byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
-            return new byte[0];
-        }
-
-        @Override
-        protected byte[] loadCertFromFile(String filePath) {
             return new byte[0];
         }
 
