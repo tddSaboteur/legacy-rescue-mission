@@ -183,7 +183,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         byte[] privateKey = null;
         if (sftpConfig.getPrivateKeyUri() != null) {
-            privateKey = loadPrivateKey(sftpConfig);
+            privateKey = securityProvider.loadPrivateKey(sftpConfig);
         }
         InputStream knownHostIS = null;
         if (isNotEmpty(sftpConfig.getKnownHostsUri())) {
@@ -218,22 +218,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         return knownHostIS;
     }
 
-    protected byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
-        byte[] privateKey;
-        LOG.debug("Using private key uri : {}", sftpConfig.getPrivateKeyUri());
 
-        try {
-            InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
-                    sftpConfig.getPrivateKeyUri());
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            IOHelper.copyAndCloseInput(is, bos);
-            privateKey = bos.toByteArray();
-
-        } catch (IOException e) {
-            throw new SftpClientException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
-        }
-        return privateKey;
-    }
 
 
     /**

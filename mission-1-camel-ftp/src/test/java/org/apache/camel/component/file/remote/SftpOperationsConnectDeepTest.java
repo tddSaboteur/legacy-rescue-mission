@@ -67,6 +67,7 @@ class SftpOperationsConnectDeepTest {
     @Test
     public void connect_widthPrivateKeyNotNull() {
         when(configuration.getPrivateKeyUri()).thenReturn("My private key path");
+        when(securityProvider.loadPrivateKey(any())).thenReturn(new byte[0]);
         sftpOperations.connect(configuration, null);
     }
     @Test
@@ -94,10 +95,6 @@ class SftpOperationsConnectDeepTest {
     class TestSftpOperations extends SftpOperations{
         public TestSftpOperations(){
             super(sftpClient,securityProvider);
-        }
-        @Override
-        protected byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
-            return new byte[0];
         }
 
         @Override
