@@ -60,18 +60,20 @@ public class SftpSecurityProvider {
     }
 
     public byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
-        byte[] privateKey;
-        LOG.debug("Using private key uri : {}", sftpConfig.getPrivateKeyUri());
+        byte[] privateKey = null;
+        if (sftpConfig.getPrivateKeyUri() != null) {
+            LOG.debug("Using private key uri : {}", sftpConfig.getPrivateKeyUri());
 
-        try {
-            InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(camelContext,
-                    sftpConfig.getPrivateKeyUri());
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            IOHelper.copyAndCloseInput(is, bos);
-            privateKey = bos.toByteArray();
+            try {
+                InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(camelContext,
+                        sftpConfig.getPrivateKeyUri());
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                IOHelper.copyAndCloseInput(is, bos);
+                privateKey = bos.toByteArray();
 
-        } catch (IOException e) {
-            throw new SftpClientException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
+            } catch (IOException e) {
+                throw new SftpClientException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
+            }
         }
         return privateKey;
     }

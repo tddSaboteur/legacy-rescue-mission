@@ -181,9 +181,9 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         byte[] certData = securityProvider.resolveCertificateBytes(sftpConfig);
 
         byte[] privateKey = null;
-        if (sftpConfig.getPrivateKeyUri() != null) {
-            privateKey = securityProvider.loadPrivateKey(sftpConfig);
-        }
+
+        privateKey = securityProvider.loadPrivateKey(sftpConfig);
+
         InputStream knownHostIS = null;
         if (isNotEmpty(sftpConfig.getKnownHostsUri())) {
             knownHostIS = securityProvider.loadKnownHostsIS(sftpConfig.getKnownHostsUri());

@@ -66,20 +66,17 @@ class SftpOperationsConnectDeepTest {
 
     @Test
     public void connect_widthPrivateKeyNotNull() {
-        when(configuration.getPrivateKeyUri()).thenReturn("My private key path");
         when(securityProvider.loadPrivateKey(any())).thenReturn(new byte[0]);
         sftpOperations.connect(configuration, null);
     }
     @Test
     public void connect_widthCertificateFileNotNull() {
-        when(configuration.getCertFile()).thenReturn("My private key path");
         when(securityProvider.resolveCertificateBytes(any())).thenReturn(new byte[0]);
         sftpOperations.connect(configuration, null);
     }
 
     @Test
     public void connect_widthCertificateUriNotNull() {
-        when(configuration.getCertUri()).thenReturn("My private key path");
         when(securityProvider.resolveCertificateBytes(any())).thenReturn(new byte[0]);
         sftpOperations.connect(configuration, null);
     }
