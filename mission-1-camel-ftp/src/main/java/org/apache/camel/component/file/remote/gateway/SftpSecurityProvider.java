@@ -29,4 +29,14 @@ public class SftpSecurityProvider {
             throw new SftpClientException("Cannot read certificate file: " + filePath, e);
         }
     }
+    public byte[] loadCertFromUri(String certUri) {
+        try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
+                camelContext, certUri)) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            IOHelper.copyAndCloseInput(is, bos);
+            return bos.toByteArray();
+        } catch (IOException e) {
+            throw new SftpClientException("Cannot read certificate resource: " + certUri, e);
+        }
+    }
 }

@@ -72,11 +72,14 @@ class SftpOperationsConnectDeepTest {
     @Test
     public void connect_widthCertificateFileNotNull() {
         when(configuration.getCertFile()).thenReturn("My private key path");
+        when(securityProvider.loadCertFromFile(any())).thenReturn(new byte[0]);
+
         sftpOperations.connect(configuration, null);
     }
     @Test
     public void connect_widthCertificateUriNotNull() {
         when(configuration.getCertUri()).thenReturn("My private key path");
+        when(securityProvider.loadCertFromUri(any())).thenReturn(new byte[0]);
         sftpOperations.connect(configuration, null);
     }
 
@@ -94,11 +97,6 @@ class SftpOperationsConnectDeepTest {
         }
         @Override
         protected byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
-            return new byte[0];
-        }
-
-        @Override
-        protected byte[] loadCertFromUri(String certUri) {
             return new byte[0];
         }
 

@@ -245,7 +245,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             return securityProvider.loadCertFromFile(config.getCertFile());
         }
         if (isNotEmpty(config.getCertUri())) {
-            return loadCertFromUri(config.getCertUri());
+            return securityProvider.loadCertFromUri(config.getCertUri());
         }
         if (config.getCertBytes() != null) {
             return config.getCertBytes();
@@ -253,16 +253,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         return null;
     }
 
-    protected byte[] loadCertFromUri(String certUri) {
-        try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
-                endpoint.getCamelContext(), certUri)) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            IOHelper.copyAndCloseInput(is, bos);
-            return bos.toByteArray();
-        } catch (IOException e) {
-            throw new SftpClientException("Cannot read certificate resource: " + certUri, e);
-        }
-    }
+
 
     /**
      * Detects the OpenSSH certificate key type from the given certificate data. OpenSSH certificate files use text
