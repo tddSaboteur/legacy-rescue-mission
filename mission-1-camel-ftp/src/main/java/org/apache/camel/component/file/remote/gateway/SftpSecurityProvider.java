@@ -1,10 +1,9 @@
 package org.apache.camel.component.file.remote.gateway;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.Endpoint;
+import org.apache.camel.component.file.remote.BaseSftpConfiguration;
 import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
-import org.apache.camel.impl.DefaultDumpRoutesStrategy;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.util.IOHelper;
 import org.slf4j.Logger;
@@ -13,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import static org.apache.camel.util.ObjectHelper.isNotEmpty;
 
 public class SftpSecurityProvider {
 
@@ -23,7 +24,20 @@ public class SftpSecurityProvider {
         this.camelContext = camelContext;
     }
 
-    public byte[] loadCertFromFile(String filePath) {
+    public byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
+        if (isNotEmpty(config.getCertFile())) {
+            return loadCertFromFile(config.getCertFile());
+        }
+        if (isNotEmpty(config.getCertUri())) {
+            return loadCertFromUri(config.getCertUri());
+        }
+        if (config.getCertBytes() != null) {
+            return config.getCertBytes();
+        }
+        return null;
+    }
+
+    private byte[] loadCertFromFile(String filePath) {
         try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
                 camelContext, "file:" + filePath)) {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -34,7 +48,7 @@ public class SftpSecurityProvider {
         }
     }
 
-    public byte[] loadCertFromUri(String certUri) {
+    private byte[] loadCertFromUri(String certUri) {
         try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
                 camelContext, certUri)) {
             ByteArrayOutputStream bos = new ByteArrayOutputStream();

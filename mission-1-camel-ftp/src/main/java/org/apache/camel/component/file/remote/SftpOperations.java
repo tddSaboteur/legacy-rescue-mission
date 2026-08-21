@@ -178,8 +178,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
-        byte[] certData = resolveCertificateBytes(sftpConfig);
-
+        byte[] certData = securityProvider.resolveCertificateBytes(sftpConfig);
 
         byte[] privateKey = null;
         if (sftpConfig.getPrivateKeyUri() != null) {
@@ -209,18 +208,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
      * Resolves certificate bytes from the configuration's certFile, certUri, or certBytes. Returns null if no
      * certificate is configured.
      */
-    private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
-        if (isNotEmpty(config.getCertFile())) {
-            return securityProvider.loadCertFromFile(config.getCertFile());
-        }
-        if (isNotEmpty(config.getCertUri())) {
-            return securityProvider.loadCertFromUri(config.getCertUri());
-        }
-        if (config.getCertBytes() != null) {
-            return config.getCertBytes();
-        }
-        return null;
-    }
+
 
 
 
