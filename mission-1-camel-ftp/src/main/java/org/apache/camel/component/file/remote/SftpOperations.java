@@ -187,7 +187,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
         InputStream knownHostIS = null;
         if (isNotEmpty(sftpConfig.getKnownHostsUri())) {
-            knownHostIS = loadKnownHostsIS(sftpConfig.getKnownHostsUri());
+            knownHostIS = securityProvider.loadKnownHostsIS(sftpConfig.getKnownHostsUri());
         }
 
         // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
@@ -204,22 +204,6 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         jschClient.init(new JschSetup(sftpConfig, certData, privateKey, knownHostIS, certKeyType));
     }
-
-    public InputStream loadKnownHostsIS(String knownHostsUri) {
-        InputStream knownHostIS;
-        LOG.debug("Using known hosts uri: {}", knownHostsUri);
-        try {
-            knownHostIS = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
-                    knownHostsUri);
-
-        } catch (IOException e) {
-            throw new SftpClientException("Cannot read resource: " + knownHostsUri, e);
-        }
-        return knownHostIS;
-    }
-
-
-
 
     /**
      * Resolves certificate bytes from the configuration's certFile, certUri, or certBytes. Returns null if no

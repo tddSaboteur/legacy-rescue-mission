@@ -87,6 +87,7 @@ class SftpOperationsConnectDeepTest {
     @Test
     public void connect_widthKnownHostsNotNull() {
         when(configuration.getKnownHostsUri()).thenReturn("uri");
+        when(securityProvider.loadKnownHostsIS(anyString())).thenReturn(InputStream.nullInputStream());
         sftpOperations.connect(configuration, null);
     }
 
@@ -97,10 +98,6 @@ class SftpOperationsConnectDeepTest {
             super(sftpClient,securityProvider);
         }
 
-        @Override
-        public InputStream loadKnownHostsIS(String knownHostsUri) {
-            return InputStream.nullInputStream();
-        }
     }
 
 }

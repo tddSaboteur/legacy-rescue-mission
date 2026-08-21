@@ -20,7 +20,7 @@ public class SftpSecurityProvider {
     private final CamelContext camelContext;
 
     public SftpSecurityProvider(CamelContext camelContext) {
-        this.camelContext= camelContext;
+        this.camelContext = camelContext;
     }
 
     public byte[] loadCertFromFile(String filePath) {
@@ -33,6 +33,7 @@ public class SftpSecurityProvider {
             throw new SftpClientException("Cannot read certificate file: " + filePath, e);
         }
     }
+
     public byte[] loadCertFromUri(String certUri) {
         try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
                 camelContext, certUri)) {
@@ -43,6 +44,7 @@ public class SftpSecurityProvider {
             throw new SftpClientException("Cannot read certificate resource: " + certUri, e);
         }
     }
+
     public byte[] loadPrivateKey(SftpConfiguration sftpConfig) {
         byte[] privateKey;
         LOG.debug("Using private key uri : {}", sftpConfig.getPrivateKeyUri());
@@ -58,5 +60,18 @@ public class SftpSecurityProvider {
             throw new SftpClientException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
         }
         return privateKey;
+    }
+
+    public InputStream loadKnownHostsIS(String knownHostsUri) {
+        InputStream knownHostIS;
+        LOG.debug("Using known hosts uri: {}", knownHostsUri);
+        try {
+            knownHostIS = ResourceHelper.resolveMandatoryResourceAsInputStream(camelContext,
+                    knownHostsUri);
+
+        } catch (IOException e) {
+            throw new SftpClientException("Cannot read resource: " + knownHostsUri, e);
+        }
+        return knownHostIS;
     }
 }
