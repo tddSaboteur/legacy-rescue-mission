@@ -170,16 +170,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         return true;
     }
 
-
-
-
-
     protected void initialiseJsch(final RemoteFileConfiguration configuration) throws SftpClientException {
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
         byte[] certData = securityProvider.resolveCertificateBytes(sftpConfig);
-        byte[] privateKey = securityProvider.loadPrivateKey(sftpConfig);
+        byte[] privateKey = securityProvider.loadPrivateKey(sftpConfig.getPrivateKeyUri());
         InputStream knownHostIS = securityProvider.loadKnownHostsIS(sftpConfig.getKnownHostsUri());
         String certKeyType = securityProvider.calculateCertKeyType(sftpConfig.getPublicKeyAcceptedAlgorithms(), certData);
 
