@@ -85,7 +85,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             this.configuration = configuration;
         }
     }
-
+    /**
+     * @deprecated Используйте {@link #SftpOperations(SftpClient,SftpSecurityProvider)} для явного
+     * внедрения зависимостей. Этот конструктор оставлен только для обратной
+     * совместимости и legacy-кода.
+     */
+    @Deprecated
     public SftpOperations() {
         this(new JschSftpClient(),null);
     }
@@ -97,7 +102,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
      */
     @Deprecated
     public SftpOperations(Proxy proxy) {
-        this.jschClient = new JschSftpClient(proxy);
+        this(new JschSftpClient(proxy),null);
     }
 
     public SftpOperations(SftpClient jschClient,SftpSecurityProvider securityProvider) {
@@ -112,6 +117,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void setEndpoint(GenericFileEndpoint<SftpRemoteFile> endpoint) {
         this.endpoint = (SftpEndpoint) endpoint;
+        initSecurityProvider((SftpEndpoint) endpoint);
+    }
+
+    private void initSecurityProvider(SftpEndpoint endpoint) {
         if (securityProvider == null){
             securityProvider = new SftpSecurityProvider(endpoint.getCamelContext());
         }
