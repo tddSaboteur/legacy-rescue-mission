@@ -92,7 +92,7 @@ class SftpOperationsConnectDeepTest {
     //фиксируем запахи
     class TestSftpOperations extends SftpOperations{
         public TestSftpOperations(){
-            super(sftpClient,securityProvider);
+            super(sftpClient);
         }
 
     }

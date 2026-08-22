@@ -119,7 +119,9 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     }
 
     private void createSftpClient(){
-        this.jschClient = new JschSftpClient(new SftpSecurityProvider(endpoint.getCamelContext()),proxy);
+        if (jschClient == null){
+            this.jschClient = new JschSftpClient(new SftpSecurityProvider(endpoint.getCamelContext()),proxy);
+        }
     }
 
     @Override
@@ -179,12 +181,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
-        byte[] certData = securityProvider.resolveCertificateBytes(sftpConfig);
-        byte[] privateKey = securityProvider.loadPrivateKey(sftpConfig.getPrivateKeyUri());
-        InputStream knownHostIS = securityProvider.loadKnownHostsIS(sftpConfig.getKnownHostsUri());
-        String certKeyType = securityProvider.calculateCertKeyType(sftpConfig.getPublicKeyAcceptedAlgorithms(), certData);
 
-        jschClient.init(new JschSetup(sftpConfig, certData, privateKey, knownHostIS, certKeyType));
+
+
+        jschClient.init(new JschSetup(sftpConfig));
     }
 
     @Override
