@@ -5,6 +5,7 @@ import org.apache.camel.LoggingLevel;
 
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.SftpConfiguration;
+import org.apache.camel.component.file.remote.SftpEndpoint;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.util.HomeHelper;
 import org.apache.camel.util.ObjectHelper;
@@ -32,11 +33,18 @@ public class JschSftpClient implements SftpClient {
     private JSch jsch;
     private Proxy proxy;
     private ChannelSftp channel;
+    private SftpSecurityProvider securityProvider;
 
     public JschSftpClient() {
+        this(null,null);
     }
 
     public JschSftpClient(Proxy proxy) {
+        this(null,proxy);
+    }
+
+    public JschSftpClient(SftpSecurityProvider securityProvider, Proxy proxy) {
+        this.securityProvider = securityProvider;
         this.proxy = proxy;
     }
 
@@ -157,6 +165,9 @@ public class JschSftpClient implements SftpClient {
     //инициализация
     @Override
     public void init(JschSetup jschSetup) {
+
+
+
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
         setJSchGlobalCiphersAndKex(jschSetup.sftpConfig().getCiphers(), jschSetup.sftpConfig().getKeyExchangeProtocols());

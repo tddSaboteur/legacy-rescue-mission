@@ -35,7 +35,7 @@ class SftpOperationsTest {
 
     @BeforeEach
     public void setUp() {
-        sftp = new SftpOperations(sftpClient,null);
+        sftp = new SftpOperations(sftpClient);
     }
 
     @Test

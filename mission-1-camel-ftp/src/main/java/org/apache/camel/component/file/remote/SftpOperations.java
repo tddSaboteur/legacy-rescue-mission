@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Vector;
@@ -47,7 +46,6 @@ import org.apache.camel.component.file.remote.gateway.JschSetup;
 import org.apache.camel.component.file.remote.gateway.JschSftpClient;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
 import org.apache.camel.component.file.remote.gateway.SftpSecurityProvider;
-import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
@@ -75,7 +73,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     private final Lock lock = new ReentrantLock();
     private SftpClient jschClient;
-    private SftpSecurityProvider securityProvider;
+    private final Proxy proxy;
 
     private static class TaskPayload {
         final RemoteFileConfiguration configuration;
@@ -86,28 +84,28 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
     }
     /**
-     * @deprecated Используйте {@link #SftpOperations(SftpClient,SftpSecurityProvider)} для явного
+     * @deprecated Используйте {@link #SftpOperations(SftpClient)} для явного
      * внедрения зависимостей. Этот конструктор оставлен только для обратной
      * совместимости и legacy-кода.
      */
     @Deprecated
     public SftpOperations() {
-        this(new JschSftpClient(),null);
+        this.proxy = null;
     }
 
     /**
-     * @deprecated Используйте {@link #SftpOperations(SftpClient,SftpSecurityProvider)} для явного
+     * @deprecated Используйте {@link #SftpOperations(SftpClient)} для явного
      * внедрения зависимостей. Этот конструктор оставлен только для обратной
      * совместимости и legacy-кода.
      */
     @Deprecated
     public SftpOperations(Proxy proxy) {
-        this(new JschSftpClient(proxy),null);
+        this.proxy = proxy;
     }
 
-    public SftpOperations(SftpClient jschClient,SftpSecurityProvider securityProvider) {
+    public SftpOperations(SftpClient jschClient) {
         this.jschClient = jschClient;
-        this.securityProvider = securityProvider;
+        this.proxy = null;
     }
 
     /**
@@ -117,13 +115,11 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void setEndpoint(GenericFileEndpoint<SftpRemoteFile> endpoint) {
         this.endpoint = (SftpEndpoint) endpoint;
-        initSecurityProvider((SftpEndpoint) endpoint);
+        createSftpClient();
     }
 
-    private void initSecurityProvider(SftpEndpoint endpoint) {
-        if (securityProvider == null){
-            securityProvider = new SftpSecurityProvider(endpoint.getCamelContext());
-        }
+    private void createSftpClient(){
+        this.jschClient = new JschSftpClient(new SftpSecurityProvider(endpoint.getCamelContext()),proxy);
     }
 
     @Override
