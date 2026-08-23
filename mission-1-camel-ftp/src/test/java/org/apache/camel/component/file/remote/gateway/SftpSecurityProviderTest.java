@@ -20,6 +20,7 @@ import static org.mockito.Mockito.when;
 class SftpSecurityProviderTest {
 
     private static final String PRIVATE_KEY_PATH = "id_rsa";
+    public static final String CERT_EXAMPLE = "cert_host_ca.pub";
     SftpSecurityProvider securityProvider;
     @Mock
     SftpConfiguration configuration;
@@ -54,8 +55,14 @@ class SftpSecurityProviderTest {
 
     @Test
     public void resolveCertificate_widthCertificateFileNotNull() {
-        var uri = getClass().getClassLoader().getResource("cert_host_ca.pub");
+        var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
         when(configuration.getCertFile()).thenReturn(uri.getPath());
+        assertNotNull(securityProvider.resolveCertificateBytes(configuration));
+    }
+    @Test
+    public void connect_widthCertificateUriNotNull() {
+        var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
+        when(configuration.getCertUri()).thenReturn(uri.toString());
         assertNotNull(securityProvider.resolveCertificateBytes(configuration));
     }
 }
