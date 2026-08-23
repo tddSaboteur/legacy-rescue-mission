@@ -80,4 +80,9 @@ class SftpSecurityProviderTest {
 
         assertArrayEquals(expected,securityProvider.resolveCertificateBytes(configuration));
     }
+    @Test
+    public void loadKnownHostsIS(){
+        assertNotNull(securityProvider.loadKnownHostsIS("known_hosts"));
+    }
+
 }
