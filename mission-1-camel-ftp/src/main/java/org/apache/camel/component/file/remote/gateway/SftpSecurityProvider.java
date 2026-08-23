@@ -38,22 +38,16 @@ public class SftpSecurityProvider {
     }
 
     private byte[] loadCertFromFile(String filePath) {
-        try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
-                camelContext, "file:" + filePath)) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            IOHelper.copyAndCloseInput(is, bos);
-            return bos.toByteArray();
+        try  {
+            return readResourceBytes("file:" + filePath);
         } catch (IOException e) {
             throw new SftpClientException("Cannot read certificate file: " + filePath, e);
         }
     }
 
     private byte[] loadCertFromUri(String certUri) {
-        try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
-                camelContext, certUri)) {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            IOHelper.copyAndCloseInput(is, bos);
-            return bos.toByteArray();
+        try {
+            return readResourceBytes(certUri);
         } catch (IOException e) {
             throw new SftpClientException("Cannot read certificate resource: " + certUri, e);
         }
@@ -63,14 +57,8 @@ public class SftpSecurityProvider {
         byte[] privateKey = null;
         if (privateKeyUri != null) {
             LOG.debug("Using private key uri : {}", privateKeyUri);
-
             try {
-                InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(camelContext,
-                        privateKeyUri);
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                IOHelper.copyAndCloseInput(is, bos);
-                privateKey = bos.toByteArray();
-
+                privateKey = readResourceBytes(privateKeyUri);
             } catch (IOException e) {
                 throw new SftpClientException("Cannot read resource: " + privateKeyUri, e);
             }
@@ -83,15 +71,29 @@ public class SftpSecurityProvider {
         if (isNotEmpty(knownHostsUri)) {
             LOG.debug("Using known hosts uri: {}", knownHostsUri);
             try {
-                knownHostIS = ResourceHelper.resolveMandatoryResourceAsInputStream(camelContext,
-                        knownHostsUri);
-
+                knownHostIS = openResource(knownHostsUri);
             } catch (IOException e) {
                 throw new SftpClientException("Cannot read resource: " + knownHostsUri, e);
             }
         }
         return knownHostIS;
     }
+
+    private byte[] readResourceBytes(String uri) throws IOException {
+        InputStream is = openResource(uri);
+        return readByteOfInputStream(is);
+    }
+    private static byte[] readByteOfInputStream(InputStream is) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        IOHelper.copyAndCloseInput(is, bos);
+        return bos.toByteArray();
+    }
+
+    private InputStream openResource(String knownHostsUri) throws IOException {
+        return ResourceHelper.resolveMandatoryResourceAsInputStream(camelContext,
+                knownHostsUri);
+    }
+
     // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
     // JSch's defaults exclude SHA-1 based algorithms (matching OpenSSH 8.2+ policy),
     // which includes ssh-rsa-cert-v01@openssh.com (or ssh-rsa-cert per newer RFC
@@ -106,12 +108,6 @@ public class SftpSecurityProvider {
         }
         return certKeyType;
     }
-
-    /**
-     * Resolves certificate bytes from the configuration's certFile, certUri, or certBytes. Returns null if no
-     * certificate is configured.
-     */
-
 
     /**
      * Detects the OpenSSH certificate key type from the given certificate data. OpenSSH certificate files use text
