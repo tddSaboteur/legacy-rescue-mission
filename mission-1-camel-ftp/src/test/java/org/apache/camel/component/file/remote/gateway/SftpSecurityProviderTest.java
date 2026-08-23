@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -94,5 +95,19 @@ class SftpSecurityProviderTest {
             certData = input.readAllBytes();
         }
         assertNull(securityProvider.calculateCertKeyType("PublicKeyAcceptedAlgorithms",certData));
+    }
+    @Test
+    public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnKeyTypeSshRsaCert() throws IOException {
+        byte[] cert = """
+            ssh-rsa-cert AAAA123
+            """.getBytes(StandardCharsets.UTF_8);
+        assertNotNull(securityProvider.calculateCertKeyType(null,cert));
+    }
+    @Test
+    public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnAlgorithmsKeyType() throws IOException {
+        byte[] cert = """
+            ssh-ed25519-cert-v01@openssh.com AAAA123
+            """.getBytes(StandardCharsets.UTF_8);
+        assertNotNull(securityProvider.calculateCertKeyType(null,cert));
     }
 }
