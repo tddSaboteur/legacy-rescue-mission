@@ -33,7 +33,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    void load_WhenConfigEmpty_ShouldReturnFalse() {
+    void load_WhenConfigEmpty_ShouldReturnNull() {
         assertNull(securityProvider.resolveCertificateBytes(configuration));
         assertNull(securityProvider.loadKnownHostsIS(null));
         assertNull(securityProvider.loadPrivateKey(null));
@@ -84,5 +84,15 @@ class SftpSecurityProviderTest {
     public void loadKnownHostsIS(){
         assertNotNull(securityProvider.loadKnownHostsIS("known_hosts"));
     }
+    @Test
+    public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNotNull_ShouldReturnNull() throws IOException {
+        byte[] certData;
+        try (InputStream input = getClass()
+                .getClassLoader()
+                .getResourceAsStream(CERT_EXAMPLE)) {
 
+            certData = input.readAllBytes();
+        }
+        assertNull(securityProvider.calculateCertKeyType("PublicKeyAcceptedAlgorithms",certData));
+    }
 }
