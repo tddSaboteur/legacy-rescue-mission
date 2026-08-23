@@ -33,5 +33,9 @@ class SftpSecurityProviderTest {
         assertNull(securityProvider.calculateCertKeyType(null,null));
     }
 
+    @Test
+    public void loadPrivateKey_widthPrivateKeyNotNull() {
+        securityProvider.loadPrivateKey("private_key");
+    }
 
 }
