@@ -2,26 +2,31 @@ package org.apache.camel.component.file.remote.gateway;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.file.remote.SftpConfiguration;
+import org.apache.camel.impl.DefaultCamelContext;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SftpSecurityProviderTest {
+
+    private static final String PRIVATE_KEY_PATH = "id_rsa";
     SftpSecurityProvider securityProvider;
     @Mock
     SftpConfiguration configuration;
-    @Mock
     CamelContext camelContext;
+
     @BeforeEach
     void setUp() {
+        camelContext = new DefaultCamelContext();
         securityProvider = new SftpSecurityProvider(camelContext);
     }
 
@@ -34,8 +39,16 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void loadPrivateKey_widthPrivateKeyNotNull() {
-        securityProvider.loadPrivateKey("private_key");
+    public void loadPrivateKey_widthPrivateKeyNotNull() throws IOException {
+        byte[] expected;
+
+        try (InputStream input = getClass()
+                .getClassLoader()
+                .getResourceAsStream(PRIVATE_KEY_PATH)) {
+
+            expected = input.readAllBytes();
+        }
+        assertArrayEquals(expected,securityProvider.loadPrivateKey(PRIVATE_KEY_PATH));
     }
 
 }
