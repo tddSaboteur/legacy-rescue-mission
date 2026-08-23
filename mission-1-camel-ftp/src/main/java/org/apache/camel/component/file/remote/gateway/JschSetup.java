@@ -5,6 +5,5 @@ import org.apache.camel.component.file.remote.SftpConfiguration;
 
 import java.io.InputStream;
 
-public record JschSetup( SftpConfiguration sftpConfig, byte[] certData, byte[] privateKey,
-                        InputStream knownHosts,String certKeyType) {
+public record JschSetup( SftpConfiguration sftpConfig) {
 }

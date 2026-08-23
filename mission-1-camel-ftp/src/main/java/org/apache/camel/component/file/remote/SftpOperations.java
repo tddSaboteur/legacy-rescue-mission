@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Vector;
@@ -46,7 +45,7 @@ import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.component.file.remote.gateway.JschSetup;
 import org.apache.camel.component.file.remote.gateway.JschSftpClient;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
-import org.apache.camel.support.ResourceHelper;
+import org.apache.camel.component.file.remote.gateway.SftpSecurityProvider;
 import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
@@ -74,6 +73,7 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
 
     private final Lock lock = new ReentrantLock();
     private SftpClient jschClient;
+    private final Proxy proxy;
 
     private static class TaskPayload {
         final RemoteFileConfiguration configuration;
@@ -83,9 +83,14 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             this.configuration = configuration;
         }
     }
-
+    /**
+     * @deprecated Используйте {@link #SftpOperations(SftpClient)} для явного
+     * внедрения зависимостей. Этот конструктор оставлен только для обратной
+     * совместимости и legacy-кода.
+     */
+    @Deprecated
     public SftpOperations() {
-        this(new JschSftpClient());
+        this.proxy = null;
     }
 
     /**
@@ -95,11 +100,12 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
      */
     @Deprecated
     public SftpOperations(Proxy proxy) {
-        this.jschClient = new JschSftpClient(proxy);
+        this.proxy = proxy;
     }
 
     public SftpOperations(SftpClient jschClient) {
         this.jschClient = jschClient;
+        this.proxy = null;
     }
 
     /**
@@ -109,6 +115,13 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     @Override
     public void setEndpoint(GenericFileEndpoint<SftpRemoteFile> endpoint) {
         this.endpoint = (SftpEndpoint) endpoint;
+        createSftpClient();
+    }
+
+    private void createSftpClient(){
+        if (jschClient == null){
+            this.jschClient = new JschSftpClient(new SftpSecurityProvider(endpoint.getCamelContext()),proxy);
+        }
     }
 
     @Override
@@ -164,117 +177,14 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         return true;
     }
 
-
-
-
-
     protected void initialiseJsch(final RemoteFileConfiguration configuration) throws SftpClientException {
 
         SftpConfiguration sftpConfig = (SftpConfiguration) configuration;
 
-        byte[] certData = resolveCertificateBytes(sftpConfig);
 
 
-        byte[] privateKey = null;
-        if (sftpConfig.getPrivateKeyUri() != null) {
-            LOG.debug("Using private key uri : {}", sftpConfig.getPrivateKeyUri());
 
-            try {
-                InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
-                        sftpConfig.getPrivateKeyUri());
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                IOHelper.copyAndCloseInput(is, bos);
-                privateKey = bos.toByteArray();
-
-            } catch (IOException e) {
-                throw new SftpClientException("Cannot read resource: " + sftpConfig.getPrivateKeyUri(), e);
-            }
-        }
-        InputStream knownHostIS = null;
-        if (isNotEmpty(sftpConfig.getKnownHostsUri())) {
-            LOG.debug("Using known hosts uri: {}", sftpConfig.getKnownHostsUri());
-            try {
-                knownHostIS = ResourceHelper.resolveMandatoryResourceAsInputStream(endpoint.getCamelContext(),
-                        sftpConfig.getKnownHostsUri());
-
-            } catch (IOException e) {
-                throw new SftpClientException("Cannot read resource: " + sftpConfig.getKnownHostsUri(), e);
-            }
-        }
-
-        // Auto-configure PubkeyAcceptedAlgorithms for certificate authentication.
-        // JSch's defaults exclude SHA-1 based algorithms (matching OpenSSH 8.2+ policy),
-        // which includes ssh-rsa-cert-v01@openssh.com (or ssh-rsa-cert per newer RFC
-        // drafts). If the loaded certificate uses a key type not in the accepted list,
-        // JSch silently skips the certificate identity and auth fails.
-        // Detect the cert type and add it if missing.
-        String certKeyType = null;
-        if (sftpConfig.getPublicKeyAcceptedAlgorithms() == null) {
-            certKeyType = detectCertKeyType(certData);
-
-        }
-
-        jschClient.init(new JschSetup(sftpConfig, certData, privateKey, knownHostIS, certKeyType));
-    }
-
-
-    /**
-     * Resolves certificate bytes from the configuration's certFile, certUri, or certBytes. Returns null if no
-     * certificate is configured.
-     */
-    private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
-        if (isNotEmpty(config.getCertFile())) {
-            try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
-                    endpoint.getCamelContext(), "file:" + config.getCertFile())) {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                IOHelper.copyAndCloseInput(is, bos);
-                return bos.toByteArray();
-            } catch (IOException e) {
-                throw new SftpClientException("Cannot read certificate file: " + config.getCertFile(), e);
-            }
-        }
-        if (isNotEmpty(config.getCertUri())) {
-            try (InputStream is = ResourceHelper.resolveMandatoryResourceAsInputStream(
-                    endpoint.getCamelContext(), config.getCertUri())) {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                IOHelper.copyAndCloseInput(is, bos);
-                return bos.toByteArray();
-            } catch (IOException e) {
-                throw new SftpClientException("Cannot read certificate resource: " + config.getCertUri(), e);
-            }
-        }
-        if (config.getCertBytes() != null) {
-            return config.getCertBytes();
-        }
-        return null;
-    }
-
-    /**
-     * Detects the OpenSSH certificate key type from the given certificate data. OpenSSH certificate files use text
-     * format: "key-type base64-data [comment]".
-     *
-     * @return the certificate key type (e.g., "ssh-rsa-cert-v01@openssh.com" or "ssh-rsa-cert") or null
-     */
-    private static String detectCertKeyType(byte[] certData) {
-        if (certData == null) {
-            return null;
-        }
-        String certLine = new String(certData, StandardCharsets.UTF_8).trim();
-        int space = certLine.indexOf(' ');
-        if (space > 0) {
-            String keyType = certLine.substring(0, space);
-            if (
-                // ssh key type format for rfc until draft 03
-                // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-03.html
-                    keyType.endsWith("-cert-v01@openssh.com") ||
-                            // ssh key type format for rfc from draft 04
-                            // https://datatracker.ietf.org/doc/html/draft-miller-ssh-cert-04.html
-                            keyType.endsWith("-cert")) {
-
-                return keyType;
-            }
-        }
-        return null;
+        jschClient.init(new JschSetup(sftpConfig));
     }
 
     @Override
