@@ -2,7 +2,6 @@ package org.apache.camel.component.file.remote.gateway;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.file.remote.BaseSftpConfiguration;
-import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.support.ResourceHelper;
 import org.apache.camel.util.IOHelper;
