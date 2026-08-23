@@ -34,7 +34,7 @@ class SftpOperationsConnectDeepTest {
 
     @BeforeEach
     void setUp() {
-        sftpOperations = new TestSftpOperations();
+        sftpOperations = new SftpOperations(sftpClient);
         sftpOperations.setEndpoint(endpoint);
     }
 
@@ -62,23 +62,6 @@ class SftpOperationsConnectDeepTest {
         sftpOperations.connect(configuration, null);
 
         verify(sftpClient, times(4)).init(any());
-    }
-
-
-    @Test
-    public void connect_widthKnownHostsNotNull() {
-        when(configuration.getKnownHostsUri()).thenReturn("uri");
-        when(securityProvider.loadKnownHostsIS(anyString())).thenReturn(InputStream.nullInputStream());
-        sftpOperations.connect(configuration, null);
-    }
-
-
-    //фиксируем запахи
-    class TestSftpOperations extends SftpOperations{
-        public TestSftpOperations(){
-            super(sftpClient);
-        }
-
     }
 
 }

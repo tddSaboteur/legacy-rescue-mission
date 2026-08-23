@@ -65,4 +65,19 @@ class SftpSecurityProviderTest {
         when(configuration.getCertUri()).thenReturn(uri.toString());
         assertNotNull(securityProvider.resolveCertificateBytes(configuration));
     }
+
+    @Test
+    public void loadPrivateKey_widthCertBytesNotNull() throws IOException {
+        byte[] expected;
+
+        try (InputStream input = getClass()
+                .getClassLoader()
+                .getResourceAsStream(CERT_EXAMPLE)) {
+
+            expected = input.readAllBytes();
+        }
+        when(configuration.getCertBytes()).thenReturn(expected);
+
+        assertArrayEquals(expected,securityProvider.resolveCertificateBytes(configuration));
+    }
 }
