@@ -14,6 +14,7 @@ import java.io.InputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SftpSecurityProviderTest {
@@ -51,4 +52,10 @@ class SftpSecurityProviderTest {
         assertArrayEquals(expected,securityProvider.loadPrivateKey(PRIVATE_KEY_PATH));
     }
 
+    @Test
+    public void resolveCertificate_widthCertificateFileNotNull() {
+        var uri = getClass().getClassLoader().getResource("cert_host_ca.pub");
+        when(configuration.getCertFile()).thenReturn(uri.getPath());
+        assertNotNull(securityProvider.resolveCertificateBytes(configuration));
+    }
 }

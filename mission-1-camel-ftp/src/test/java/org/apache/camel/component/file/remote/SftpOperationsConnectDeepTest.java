@@ -64,13 +64,6 @@ class SftpOperationsConnectDeepTest {
         verify(sftpClient, times(4)).init(any());
     }
 
-
-    @Test
-    public void connect_widthCertificateFileNotNull() {
-        when(securityProvider.resolveCertificateBytes(any())).thenReturn(new byte[0]);
-        sftpOperations.connect(configuration, null);
-    }
-
     @Test
     public void connect_widthCertificateUriNotNull() {
         when(securityProvider.resolveCertificateBytes(any())).thenReturn(new byte[0]);
