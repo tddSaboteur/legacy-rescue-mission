@@ -44,7 +44,6 @@ class SftpSecurityProviderTest {
     @Test
     void load_WhenConfigEmpty_ShouldReturnNull() {
         assertNull(securityProvider.resolve(configuration).certificate());
-        assertNull(securityProvider.calculateCertKeyType(null, null));
     }
 
     @Test
@@ -126,20 +125,23 @@ class SftpSecurityProviderTest {
     @Test
     public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNotNull_ShouldReturnNull() throws IOException {
         byte[] certData = readBytes(CERT_EXAMPLE);
-        assertNull(securityProvider.calculateCertKeyType("PublicKeyAcceptedAlgorithms", certData));
+        when(configuration.getPublicKeyAcceptedAlgorithms()).thenReturn("PublicKeyAcceptedAlgorithms");
+        assertNull(securityProvider.resolve(configuration).certKeyType());
     }
 
     @Test
     public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnKeyTypeSshRsaCert() throws IOException {
         String certType = "ssh-rsa-cert";
         byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
-        assertEquals(certType, securityProvider.calculateCertKeyType(null, cert));
+        when(configuration.getCertBytes()).thenReturn(cert);
+        assertEquals(certType, securityProvider.resolve(configuration).certKeyType());
     }
 
     @Test
     public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnAlgorithmsKeyType() throws IOException {
         String certType = "ssh-ed25519-cert-v01@openssh.com";
         byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
-        assertEquals(certType, securityProvider.calculateCertKeyType(null, cert));
+        when(configuration.getCertBytes()).thenReturn(cert);
+        assertEquals(certType, securityProvider.resolve(configuration).certKeyType());
     }
 }

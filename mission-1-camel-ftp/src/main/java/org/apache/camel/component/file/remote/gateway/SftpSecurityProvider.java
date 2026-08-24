@@ -25,7 +25,12 @@ public class SftpSecurityProvider {
     }
 
     public SecurityMaterials resolve(BaseSftpConfiguration config) {
-        return new SecurityMaterials(resolveCertificateBytes(config), loadPrivateKey(config.getPrivateKeyUri()), loadKnownHostsIS(config.getKnownHostsUri()));
+        byte[] certData = resolveCertificateBytes(config);
+        return new SecurityMaterials(certData,
+                loadPrivateKey(config.getPrivateKeyUri()),
+                loadKnownHostsIS(config.getKnownHostsUri()),
+                calculateCertKeyType(config.getPublicKeyAcceptedAlgorithms(),certData)
+        );
     }
 
     private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
@@ -105,7 +110,7 @@ public class SftpSecurityProvider {
     // drafts). If the loaded certificate uses a key type not in the accepted list,
     // JSch silently skips the certificate identity and auth fails.
     // Detect the cert type and add it if missing.
-    public String calculateCertKeyType(String publicKeyAcceptedAlgorithms, byte[] certData) {
+    private String calculateCertKeyType(String publicKeyAcceptedAlgorithms, byte[] certData) {
         String certKeyType = null;
         if (publicKeyAcceptedAlgorithms == null) {
             certKeyType = detectCertKeyType(certData);

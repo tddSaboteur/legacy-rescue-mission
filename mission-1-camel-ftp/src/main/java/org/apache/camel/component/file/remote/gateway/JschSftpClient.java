@@ -168,8 +168,6 @@ public class JschSftpClient implements SftpClient {
         var sftpConfig = jschSetup.sftpConfig();
         SecurityMaterials securityMaterials = securityProvider.resolve(sftpConfig);
 
-        String certKeyType = securityProvider.calculateCertKeyType(sftpConfig.getPublicKeyAcceptedAlgorithms(), securityMaterials.certificate());
-
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
         setJSchGlobalCiphersAndKex(jschSetup.sftpConfig().getCiphers(), jschSetup.sftpConfig().getKeyExchangeProtocols());
@@ -249,7 +247,7 @@ public class JschSftpClient implements SftpClient {
             configureJSchKnownHost(securityMaterials.knownHostsIS());
         }
 
-        createSession(jschSetup.sftpConfig(), certKeyType);
+        createSession(jschSetup.sftpConfig(), securityMaterials.certKeyType());
         LOG.trace("Channel isn't connected, trying to recreate and connect.");
         openChannel(jschSetup.sftpConfig().getFilenameEncoding(), jschSetup.sftpConfig().getConnectTimeout());
         if (LOG.isDebugEnabled()) {
