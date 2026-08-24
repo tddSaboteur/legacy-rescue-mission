@@ -3,6 +3,7 @@ package org.apache.camel.component.file.remote.gateway;
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.file.remote.SftpConfiguration;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +12,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,76 +42,80 @@ class SftpSecurityProviderTest {
         assertNull(securityProvider.resolveCertificateBytes(configuration));
         assertNull(securityProvider.loadKnownHostsIS(null));
         assertNull(securityProvider.loadPrivateKey(null));
-        assertNull(securityProvider.calculateCertKeyType(null,null));
+        assertNull(securityProvider.calculateCertKeyType(null, null));
     }
 
     @Test
     public void loadPrivateKey_widthPrivateKeyNotNull() throws IOException {
-        byte[] expected;
+        byte[] expected = readBytes(PRIVATE_KEY_PATH);
+        assertArrayEquals(expected, securityProvider.loadPrivateKey(PRIVATE_KEY_PATH));
+    }
 
+    @Test
+    public void resolveCertificate_widthCertificateFileNotNull() throws IOException {
+        var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
+        byte[] expected = readBytes(CERT_EXAMPLE);
+
+        when(configuration.getCertFile()).thenReturn(uri.getPath());
+
+        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
+    }
+
+    private byte @NonNull [] readBytes(String certExample) throws IOException {
+        byte[] expected;
         try (InputStream input = getClass()
                 .getClassLoader()
-                .getResourceAsStream(PRIVATE_KEY_PATH)) {
+                .getResourceAsStream(certExample)) {
 
             expected = input.readAllBytes();
         }
-        assertArrayEquals(expected,securityProvider.loadPrivateKey(PRIVATE_KEY_PATH));
+        return expected;
     }
 
     @Test
-    public void resolveCertificate_widthCertificateFileNotNull() {
+    public void resolveCertificate_widthCertificateUriNotNull() throws IOException {
         var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
-        when(configuration.getCertFile()).thenReturn(uri.getPath());
-        assertNotNull(securityProvider.resolveCertificateBytes(configuration));
-    }
-    @Test
-    public void resolveCertificate_widthCertificateUriNotNull() {
-        var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
+
         when(configuration.getCertUri()).thenReturn(uri.toString());
-        assertNotNull(securityProvider.resolveCertificateBytes(configuration));
+        byte[] expected = readBytes(CERT_EXAMPLE);
+
+        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
     }
 
     @Test
     public void resolveCertificate_widthCertBytesNotNull() throws IOException {
-        byte[] expected;
-
-        try (InputStream input = getClass()
-                .getClassLoader()
-                .getResourceAsStream(CERT_EXAMPLE)) {
-
-            expected = input.readAllBytes();
-        }
+        byte[] expected = readBytes(CERT_EXAMPLE);
         when(configuration.getCertBytes()).thenReturn(expected);
 
-        assertArrayEquals(expected,securityProvider.resolveCertificateBytes(configuration));
+        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
     }
+
     @Test
-    public void loadKnownHostsIS(){
-        assertNotNull(securityProvider.loadKnownHostsIS("known_hosts"));
+    public void loadKnownHostsIS() throws IOException {
+        byte[] expected = readBytes("known_hosts");
+        byte[] actual = securityProvider.loadKnownHostsIS("known_hosts").readAllBytes();
+        assertNotNull(actual);
+        assertArrayEquals(expected, actual);
+
     }
+
     @Test
     public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNotNull_ShouldReturnNull() throws IOException {
-        byte[] certData;
-        try (InputStream input = getClass()
-                .getClassLoader()
-                .getResourceAsStream(CERT_EXAMPLE)) {
-
-            certData = input.readAllBytes();
-        }
-        assertNull(securityProvider.calculateCertKeyType("PublicKeyAcceptedAlgorithms",certData));
+        byte[] certData = readBytes(CERT_EXAMPLE);
+        assertNull(securityProvider.calculateCertKeyType("PublicKeyAcceptedAlgorithms", certData));
     }
+
     @Test
     public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnKeyTypeSshRsaCert() throws IOException {
-        byte[] cert = """
-            ssh-rsa-cert AAAA123
-            """.getBytes(StandardCharsets.UTF_8);
-        assertNotNull(securityProvider.calculateCertKeyType(null,cert));
+        String certType = "ssh-rsa-cert";
+        byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
+        assertEquals(certType, securityProvider.calculateCertKeyType(null, cert));
     }
+
     @Test
     public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnAlgorithmsKeyType() throws IOException {
-        byte[] cert = """
-            ssh-ed25519-cert-v01@openssh.com AAAA123
-            """.getBytes(StandardCharsets.UTF_8);
-        assertNotNull(securityProvider.calculateCertKeyType(null,cert));
+        String certType = "ssh-ed25519-cert-v01@openssh.com";
+        byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
+        assertEquals(certType,securityProvider.calculateCertKeyType(null, cert));
     }
 }
