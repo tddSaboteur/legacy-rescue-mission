@@ -25,10 +25,10 @@ public class SftpSecurityProvider {
     }
 
     public SecurityMaterials resolve(BaseSftpConfiguration config){
-        return new SecurityMaterials();
+        return new SecurityMaterials(resolveCertificateBytes(config));
     }
 
-    public byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
+    private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
         if (isNotEmpty(config.getCertFile())) {
             return loadCertFromFile(config.getCertFile());
         }

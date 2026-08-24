@@ -43,10 +43,10 @@ class SftpSecurityProviderTest {
     void resolveTest_WhenConfigEmpty(){
         securityProvider.resolve(configuration);
     }
-    
+
     @Test
     void load_WhenConfigEmpty_ShouldReturnNull() {
-        assertNull(securityProvider.resolveCertificateBytes(configuration));
+        assertNull(securityProvider.resolve(configuration).certificate());
         assertNull(securityProvider.loadKnownHostsIS(null));
         assertNull(securityProvider.loadPrivateKey(null));
         assertNull(securityProvider.calculateCertKeyType(null, null));
@@ -58,14 +58,14 @@ class SftpSecurityProviderTest {
         assertThrows(SftpClientException.class, () -> securityProvider.loadPrivateKey(INCORRECT_PATH));
 
         when(configuration.getCertFile()).thenReturn(INCORRECT_PATH);
-        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolveCertificateBytes(configuration));
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration).certificate());
         assertEquals("Cannot read certificate file: "+INCORRECT_PATH,exception.getMessage());
     }
 
     @Test
     void load_WhenConfigIncorrectCertUri_ShouldThrowException() {
         when(configuration.getCertUri()).thenReturn(INCORRECT_PATH);
-        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolveCertificateBytes(configuration));
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration).certificate());
         assertEquals("Cannot read certificate resource: "+INCORRECT_PATH,exception.getMessage());
 
     }
@@ -83,7 +83,7 @@ class SftpSecurityProviderTest {
 
         when(configuration.getCertFile()).thenReturn(uri.getPath());
 
-        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
+        assertArrayEquals(expected, securityProvider.resolve(configuration).certificate());
     }
 
     private byte @NonNull [] readBytes(String certExample) throws IOException {
@@ -104,7 +104,7 @@ class SftpSecurityProviderTest {
         when(configuration.getCertUri()).thenReturn(uri.toString());
         byte[] expected = readBytes(CERT_EXAMPLE);
 
-        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
+        assertArrayEquals(expected, securityProvider.resolve(configuration).certificate());
     }
 
     @Test
@@ -112,7 +112,7 @@ class SftpSecurityProviderTest {
         byte[] expected = readBytes(CERT_EXAMPLE);
         when(configuration.getCertBytes()).thenReturn(expected);
 
-        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
+        assertArrayEquals(expected, securityProvider.resolve(configuration).certificate());
     }
 
     @Test
