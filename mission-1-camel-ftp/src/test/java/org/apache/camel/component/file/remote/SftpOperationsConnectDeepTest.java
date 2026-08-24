@@ -42,6 +42,7 @@ class SftpOperationsConnectDeepTest {
     @Test
     public void connect_widthRetryConfigurationIfException_shouldTryToConnect() {
         when(endpoint.getMaximumReconnectAttempts()).thenReturn(10);
+        when(sftpClient.isConnected()).thenReturn(false);
         doThrow(SftpClientException.class)
                 .when(sftpClient).init(any());
 
@@ -52,6 +53,7 @@ class SftpOperationsConnectDeepTest {
 
     @Test
     public void connect_widthRetryConfiguration_shouldTryToConnect() {
+        when(sftpClient.isConnected()).thenReturn(false);
         when(endpoint.getMaximumReconnectAttempts()).thenReturn(10);
         doThrow(SftpClientException.class)
                 .doThrow(SftpClientException.class)

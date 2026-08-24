@@ -37,7 +37,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    void resolveTest_WhenConfigEmpty() {
+    void resolve_WhenConfigEmpty_ShouldReturnEmptySecurityMaterial() {
         var material = securityProvider.resolve(configuration);
 
         assertNull(material.certificate());
@@ -71,7 +71,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    void load_WhenConfigIncorrectPrivateKyPath_ShouldThrowException() {
+    void load_WhenConfigIncorrectPrivateKeyPath_ShouldThrowException() {
         when(configuration.getPrivateKeyUri()).thenReturn(INCORRECT_PATH);
         Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
         assertEquals("Cannot read PrivateKey resource: " + INCORRECT_PATH, exception.getMessage());
@@ -87,7 +87,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void resolveCertificate_withCertificateFileNotNull() throws IOException {
+    public void resolve_WhenCertificateFileConfigured_ShouldLoadCertificate() throws IOException {
         var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
         byte[] expected = readBytes(CERT_EXAMPLE);
 
@@ -97,7 +97,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void resolveCertificate_withCertificateUriNotNull() throws IOException {
+    public void resolve_WhenCertificateUriConfigured_ShouldLoadCertificate() throws IOException {
         var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
 
         when(configuration.getCertUri()).thenReturn(uri.toString());
@@ -107,7 +107,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void resolveCertificate_withCertBytesNotNull() throws IOException {
+    public void resolve_WhenCertificateBytesConfigured_ShouldUseCertificateBytes() throws IOException {
         byte[] expected = readBytes(CERT_EXAMPLE);
         when(configuration.getCertBytes()).thenReturn(expected);
 
@@ -124,7 +124,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNotNull_ShouldReturnNull() throws IOException {
+    public void resolve_WhenPublicKeyAcceptedAlgorithmsConfigured_ShouldNotDetectCertKeyType() throws IOException {
         when(configuration.getPublicKeyAcceptedAlgorithms()).thenReturn("PublicKeyAcceptedAlgorithms");
         assertNull(securityProvider.resolve(configuration).certKeyType());
     }
@@ -145,14 +145,13 @@ class SftpSecurityProviderTest {
         assertEquals(certType, securityProvider.resolve(configuration).certKeyType());
     }
 
-    private byte @NonNull [] readBytes(String certExample) throws IOException {
-        byte[] expected;
+    private byte @NonNull [] readBytes(String resourceName) throws IOException {
         try (InputStream input = getClass()
                 .getClassLoader()
-                .getResourceAsStream(certExample)) {
+                .getResourceAsStream(resourceName)) {
 
-            expected = input.readAllBytes();
+            assertNotNull(input, () -> "Test resource not found: " + resourceName);
+            return input.readAllBytes();
         }
-        return expected;
     }
 }
