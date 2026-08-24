@@ -24,6 +24,10 @@ public class SftpSecurityProvider {
         this.camelContext = camelContext;
     }
 
+    public SecurityMaterials resolve(BaseSftpConfiguration config){
+        return new SecurityMaterials();
+    }
+
     public byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
         if (isNotEmpty(config.getCertFile())) {
             return loadCertFromFile(config.getCertFile());

@@ -40,6 +40,11 @@ class SftpSecurityProviderTest {
     }
 
     @Test
+    void resolveTest_WhenConfigEmpty(){
+        securityProvider.resolve(configuration);
+    }
+    
+    @Test
     void load_WhenConfigEmpty_ShouldReturnNull() {
         assertNull(securityProvider.resolveCertificateBytes(configuration));
         assertNull(securityProvider.loadKnownHostsIS(null));
