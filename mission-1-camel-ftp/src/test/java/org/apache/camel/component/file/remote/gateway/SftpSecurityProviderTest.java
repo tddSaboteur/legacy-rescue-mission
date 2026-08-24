@@ -13,10 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,13 +44,14 @@ class SftpSecurityProviderTest {
     @Test
     void load_WhenConfigEmpty_ShouldReturnNull() {
         assertNull(securityProvider.resolve(configuration).certificate());
-        assertNull(securityProvider.loadKnownHostsIS(null));
         assertNull(securityProvider.calculateCertKeyType(null, null));
     }
 
     @Test
     void load_WhenConfigIncorrectPath_ShouldThrowException() {
-        assertThrows(SftpClientException.class, () -> securityProvider.loadKnownHostsIS(INCORRECT_PATH));
+        when(configuration.getKnownHostsUri()).thenReturn(INCORRECT_PATH);
+        assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+
         when(configuration.getPrivateKeyUri()).thenReturn(INCORRECT_PATH);
         assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
 
@@ -119,7 +117,8 @@ class SftpSecurityProviderTest {
     @Test
     public void loadKnownHostsIS() throws IOException {
         byte[] expected = readBytes("known_hosts");
-        byte[] actual = securityProvider.loadKnownHostsIS("known_hosts").readAllBytes();
+        when(configuration.getKnownHostsUri()).thenReturn("known_hosts");
+        byte[] actual = securityProvider.resolve(configuration).knownHostsIS().readAllBytes();
         assertArrayEquals(expected, actual);
 
     }

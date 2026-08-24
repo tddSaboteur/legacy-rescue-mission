@@ -24,8 +24,8 @@ public class SftpSecurityProvider {
         this.camelContext = camelContext;
     }
 
-    public SecurityMaterials resolve(BaseSftpConfiguration config){
-        return new SecurityMaterials(resolveCertificateBytes(config),loadPrivateKey(config.getPrivateKeyUri()));
+    public SecurityMaterials resolve(BaseSftpConfiguration config) {
+        return new SecurityMaterials(resolveCertificateBytes(config), loadPrivateKey(config.getPrivateKeyUri()), loadKnownHostsIS(config.getKnownHostsUri()));
     }
 
     private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
@@ -42,7 +42,7 @@ public class SftpSecurityProvider {
     }
 
     private byte[] loadCertFromFile(String filePath) {
-        try  {
+        try {
             return readResourceBytes("file:" + filePath);
         } catch (IOException e) {
             throw new SftpClientException("Cannot read certificate file: " + filePath, e);
@@ -70,7 +70,7 @@ public class SftpSecurityProvider {
         return privateKey;
     }
 
-    public InputStream loadKnownHostsIS(String knownHostsUri) {
+    private InputStream loadKnownHostsIS(String knownHostsUri) {
         InputStream knownHostIS = null;
         if (isNotEmpty(knownHostsUri)) {
             LOG.debug("Using known hosts uri: {}", knownHostsUri);
@@ -87,6 +87,7 @@ public class SftpSecurityProvider {
         InputStream is = openResource(uri);
         return readByteOfInputStream(is);
     }
+
     private static byte[] readByteOfInputStream(InputStream is) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         IOHelper.copyAndCloseInput(is, bos);
