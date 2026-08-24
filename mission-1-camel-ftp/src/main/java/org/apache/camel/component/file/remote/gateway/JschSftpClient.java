@@ -5,7 +5,6 @@ import org.apache.camel.LoggingLevel;
 
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.SftpConfiguration;
-import org.apache.camel.component.file.remote.SftpEndpoint;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.util.HomeHelper;
 import org.apache.camel.util.ObjectHelper;

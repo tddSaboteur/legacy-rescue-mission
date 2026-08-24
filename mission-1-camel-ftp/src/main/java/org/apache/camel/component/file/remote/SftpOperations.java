@@ -57,8 +57,6 @@ import org.apache.camel.util.TimeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.camel.util.ObjectHelper.isNotEmpty;
-
 /**
  * SFTP remote file operations
  * <p/>
