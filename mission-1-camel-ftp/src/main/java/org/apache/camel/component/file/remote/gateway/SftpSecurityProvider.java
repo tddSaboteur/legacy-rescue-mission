@@ -32,7 +32,7 @@ public class SftpSecurityProvider {
                 calculateCertKeyType(config.getPublicKeyAcceptedAlgorithms(),certData)
         );
     }
-
+    //todo данный порядок это контракт или случайноя последовательность почему байты  идут последними, ведь это уже готовый вариант.
     private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
         if (isNotEmpty(config.getCertFile())) {
             return loadCertFromFile(config.getCertFile());
