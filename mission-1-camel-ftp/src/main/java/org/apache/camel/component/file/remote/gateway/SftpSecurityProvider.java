@@ -25,7 +25,7 @@ public class SftpSecurityProvider {
     }
 
     public SecurityMaterials resolve(BaseSftpConfiguration config){
-        return new SecurityMaterials(resolveCertificateBytes(config));
+        return new SecurityMaterials(resolveCertificateBytes(config),loadPrivateKey(config.getPrivateKeyUri()));
     }
 
     private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
@@ -57,7 +57,7 @@ public class SftpSecurityProvider {
         }
     }
 
-    public byte[] loadPrivateKey(String privateKeyUri) {
+    private byte[] loadPrivateKey(String privateKeyUri) {
         byte[] privateKey = null;
         if (privateKeyUri != null) {
             LOG.debug("Using private key uri : {}", privateKeyUri);

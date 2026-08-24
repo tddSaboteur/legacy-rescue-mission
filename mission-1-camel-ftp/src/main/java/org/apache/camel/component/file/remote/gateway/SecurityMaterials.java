@@ -1,4 +1,4 @@
 package org.apache.camel.component.file.remote.gateway;
 
-public record SecurityMaterials(byte[] certificate) {
+public record SecurityMaterials(byte[] certificate, byte[] privateKey) {
 }

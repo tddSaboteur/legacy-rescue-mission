@@ -48,14 +48,14 @@ class SftpSecurityProviderTest {
     void load_WhenConfigEmpty_ShouldReturnNull() {
         assertNull(securityProvider.resolve(configuration).certificate());
         assertNull(securityProvider.loadKnownHostsIS(null));
-        assertNull(securityProvider.loadPrivateKey(null));
         assertNull(securityProvider.calculateCertKeyType(null, null));
     }
 
     @Test
     void load_WhenConfigIncorrectPath_ShouldThrowException() {
         assertThrows(SftpClientException.class, () -> securityProvider.loadKnownHostsIS(INCORRECT_PATH));
-        assertThrows(SftpClientException.class, () -> securityProvider.loadPrivateKey(INCORRECT_PATH));
+        when(configuration.getPrivateKeyUri()).thenReturn(INCORRECT_PATH);
+        assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
 
         when(configuration.getCertFile()).thenReturn(INCORRECT_PATH);
         Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration).certificate());
@@ -73,7 +73,8 @@ class SftpSecurityProviderTest {
     @Test
     public void loadPrivateKey_withPrivateKeyNotNull() throws IOException {
         byte[] expected = readBytes(PRIVATE_KEY_PATH);
-        assertArrayEquals(expected, securityProvider.loadPrivateKey(PRIVATE_KEY_PATH));
+        when(configuration.getPrivateKeyUri()).thenReturn(PRIVATE_KEY_PATH);
+        assertArrayEquals(expected, securityProvider.resolve(configuration).privateKey());
     }
 
     @Test

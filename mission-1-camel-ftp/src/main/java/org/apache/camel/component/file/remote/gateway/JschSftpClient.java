@@ -170,7 +170,6 @@ public class JschSftpClient implements SftpClient {
 
         String certKeyType = securityProvider.calculateCertKeyType(sftpConfig.getPublicKeyAcceptedAlgorithms(), securityMaterials.certificate());
         InputStream knownHostIS = securityProvider.loadKnownHostsIS(sftpConfig.getKnownHostsUri());
-        byte[] privateKey = securityProvider.loadPrivateKey(sftpConfig.getPrivateKeyUri());
 
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
@@ -244,8 +243,8 @@ public class JschSftpClient implements SftpClient {
         if (isNotEmpty(jschSetup.sftpConfig().getPrivateKeyPassphrase())) {
             passphrase = jschSetup.sftpConfig().getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
         }
-        if (privateKey != null) {
-            configureJSchIdentity("ID", privateKey, securityMaterials.certificate(), passphrase);
+        if (securityMaterials.privateKey() != null) {
+            configureJSchIdentity("ID", securityMaterials.privateKey(), securityMaterials.certificate(), passphrase);
         }
         if (knownHostIS != null) {
             configureJSchKnownHost(knownHostIS);
