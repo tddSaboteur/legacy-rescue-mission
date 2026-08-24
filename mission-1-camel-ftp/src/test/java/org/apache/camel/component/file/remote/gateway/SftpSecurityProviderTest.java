@@ -37,7 +37,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    void resolveTest_WhenConfigEmpty(){
+    void resolveTest_WhenConfigEmpty() {
         securityProvider.resolve(configuration);
     }
 
@@ -48,22 +48,29 @@ class SftpSecurityProviderTest {
 
     @Test
     void load_WhenConfigIncorrectPath_ShouldThrowException() {
-        when(configuration.getKnownHostsUri()).thenReturn(INCORRECT_PATH);
-        assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
 
         when(configuration.getPrivateKeyUri()).thenReturn(INCORRECT_PATH);
         assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
 
         when(configuration.getCertFile()).thenReturn(INCORRECT_PATH);
         Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration).certificate());
-        assertEquals("Cannot read certificate file: "+INCORRECT_PATH,exception.getMessage());
+        assertEquals("Cannot read certificate file: " + INCORRECT_PATH, exception.getMessage());
     }
+
+
+    @Test
+    void load_WhenConfigIncorrectKnownHostsPath_ShouldThrowException() {
+        when(configuration.getKnownHostsUri()).thenReturn(INCORRECT_PATH);
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+        assertEquals("Cannot read KnownHostsIS resource: " + INCORRECT_PATH, exception.getMessage());
+    }
+
 
     @Test
     void load_WhenConfigIncorrectCertUri_ShouldThrowException() {
         when(configuration.getCertUri()).thenReturn(INCORRECT_PATH);
         Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration).certificate());
-        assertEquals("Cannot read certificate resource: "+INCORRECT_PATH,exception.getMessage());
+        assertEquals("Cannot read certificate resource: " + INCORRECT_PATH, exception.getMessage());
 
     }
 

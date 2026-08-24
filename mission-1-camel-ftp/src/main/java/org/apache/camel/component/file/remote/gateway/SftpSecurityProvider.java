@@ -69,7 +69,7 @@ public class SftpSecurityProvider {
             try {
                 privateKey = readResourceBytes(privateKeyUri);
             } catch (IOException e) {
-                throw new SftpClientException("Cannot read resource: " + privateKeyUri, e);
+                throw new SftpClientException("Cannot read PrivateKey resource: " + privateKeyUri, e);
             }
         }
         return privateKey;
@@ -82,7 +82,7 @@ public class SftpSecurityProvider {
             try {
                 knownHostIS = openResource(knownHostsUri);
             } catch (IOException e) {
-                throw new SftpClientException("Cannot read resource: " + knownHostsUri, e);
+                throw new SftpClientException("Cannot read KnownHostsIS resource: " + knownHostsUri, e);
             }
         }
         return knownHostIS;
