@@ -2,6 +2,7 @@ package org.apache.camel.component.file.remote.gateway;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.file.remote.SftpConfiguration;
+import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,7 @@ class SftpSecurityProviderTest {
 
     private static final String PRIVATE_KEY_PATH = "id_rsa";
     public static final String CERT_EXAMPLE = "cert_host_ca.pub";
+    public static final String INCORRECT_PATH = "INCORRECT PATH";
     SftpSecurityProvider securityProvider;
     @Mock
     SftpConfiguration configuration;
@@ -46,13 +48,31 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void loadPrivateKey_widthPrivateKeyNotNull() throws IOException {
+    void load_WhenConfigIncorrectPath_ShouldThrowException() {
+        assertThrows(SftpClientException.class, () -> securityProvider.loadKnownHostsIS(INCORRECT_PATH));
+        assertThrows(SftpClientException.class, () -> securityProvider.loadPrivateKey(INCORRECT_PATH));
+
+        when(configuration.getCertFile()).thenReturn(INCORRECT_PATH);
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolveCertificateBytes(configuration));
+        assertEquals("Cannot read certificate file: "+INCORRECT_PATH,exception.getMessage());
+    }
+
+    @Test
+    void load_WhenConfigIncorrectCertUri_ShouldThrowException() {
+        when(configuration.getCertUri()).thenReturn(INCORRECT_PATH);
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolveCertificateBytes(configuration));
+        assertEquals("Cannot read certificate resource: "+INCORRECT_PATH,exception.getMessage());
+
+    }
+
+    @Test
+    public void loadPrivateKey_withPrivateKeyNotNull() throws IOException {
         byte[] expected = readBytes(PRIVATE_KEY_PATH);
         assertArrayEquals(expected, securityProvider.loadPrivateKey(PRIVATE_KEY_PATH));
     }
 
     @Test
-    public void resolveCertificate_widthCertificateFileNotNull() throws IOException {
+    public void resolveCertificate_withCertificateFileNotNull() throws IOException {
         var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
         byte[] expected = readBytes(CERT_EXAMPLE);
 
@@ -73,7 +93,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void resolveCertificate_widthCertificateUriNotNull() throws IOException {
+    public void resolveCertificate_withCertificateUriNotNull() throws IOException {
         var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
 
         when(configuration.getCertUri()).thenReturn(uri.toString());
@@ -83,7 +103,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    public void resolveCertificate_widthCertBytesNotNull() throws IOException {
+    public void resolveCertificate_withCertBytesNotNull() throws IOException {
         byte[] expected = readBytes(CERT_EXAMPLE);
         when(configuration.getCertBytes()).thenReturn(expected);
 
@@ -94,28 +114,27 @@ class SftpSecurityProviderTest {
     public void loadKnownHostsIS() throws IOException {
         byte[] expected = readBytes("known_hosts");
         byte[] actual = securityProvider.loadKnownHostsIS("known_hosts").readAllBytes();
-        assertNotNull(actual);
         assertArrayEquals(expected, actual);
 
     }
 
     @Test
-    public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNotNull_ShouldReturnNull() throws IOException {
+    public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNotNull_ShouldReturnNull() throws IOException {
         byte[] certData = readBytes(CERT_EXAMPLE);
         assertNull(securityProvider.calculateCertKeyType("PublicKeyAcceptedAlgorithms", certData));
     }
 
     @Test
-    public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnKeyTypeSshRsaCert() throws IOException {
+    public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnKeyTypeSshRsaCert() throws IOException {
         String certType = "ssh-rsa-cert";
         byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
         assertEquals(certType, securityProvider.calculateCertKeyType(null, cert));
     }
 
     @Test
-    public void calculateCertKeyType_widthPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnAlgorithmsKeyType() throws IOException {
+    public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnAlgorithmsKeyType() throws IOException {
         String certType = "ssh-ed25519-cert-v01@openssh.com";
         byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
-        assertEquals(certType,securityProvider.calculateCertKeyType(null, cert));
+        assertEquals(certType, securityProvider.calculateCertKeyType(null, cert));
     }
 }
