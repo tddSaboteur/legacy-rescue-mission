@@ -47,10 +47,7 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    void load_WhenConfigIncorrectPath_ShouldThrowException() {
-
-        when(configuration.getPrivateKeyUri()).thenReturn(INCORRECT_PATH);
-        assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+    void load_WhenConfigIncorrectCertPath_ShouldThrowException() {
 
         when(configuration.getCertFile()).thenReturn(INCORRECT_PATH);
         Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration).certificate());
@@ -64,6 +61,14 @@ class SftpSecurityProviderTest {
         Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
         assertEquals("Cannot read KnownHostsIS resource: " + INCORRECT_PATH, exception.getMessage());
     }
+
+    @Test
+    void load_WhenConfigIncorrectPrivateKyPath_ShouldThrowException() {
+        when(configuration.getPrivateKeyUri()).thenReturn(INCORRECT_PATH);
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+        assertEquals("Cannot read PrivateKey resource: " + INCORRECT_PATH, exception.getMessage());
+    }
+
 
 
     @Test
