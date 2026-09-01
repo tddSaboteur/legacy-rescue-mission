@@ -13,13 +13,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,101 +36,121 @@ class SftpSecurityProviderTest {
     }
 
     @Test
-    void load_WhenConfigEmpty_ShouldReturnNull() {
-        assertNull(securityProvider.resolveCertificateBytes(configuration));
-        assertNull(securityProvider.loadKnownHostsIS(null));
-        assertNull(securityProvider.loadPrivateKey(null));
-        assertNull(securityProvider.calculateCertKeyType(null, null));
+    void resolve_WhenConfigEmpty_ShouldReturnEmptySecurityMaterial() {
+        var material = securityProvider.resolve(configuration);
+
+        assertNull(material.certificate());
+        assertNull(material.privateKey());
+        assertNull(material.knownHostsIS());
+        assertNull(material.certKeyType());
     }
 
     @Test
-    void load_WhenConfigIncorrectPath_ShouldThrowException() {
-        assertThrows(SftpClientException.class, () -> securityProvider.loadKnownHostsIS(INCORRECT_PATH));
-        assertThrows(SftpClientException.class, () -> securityProvider.loadPrivateKey(INCORRECT_PATH));
+    void load_WhenConfigIncorrectCertPath_ShouldThrowException() {
 
         when(configuration.getCertFile()).thenReturn(INCORRECT_PATH);
-        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolveCertificateBytes(configuration));
-        assertEquals("Cannot read certificate file: "+INCORRECT_PATH,exception.getMessage());
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+        assertEquals("Cannot read certificate file: " + INCORRECT_PATH, exception.getMessage());
     }
+
 
     @Test
     void load_WhenConfigIncorrectCertUri_ShouldThrowException() {
         when(configuration.getCertUri()).thenReturn(INCORRECT_PATH);
-        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolveCertificateBytes(configuration));
-        assertEquals("Cannot read certificate resource: "+INCORRECT_PATH,exception.getMessage());
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+        assertEquals("Cannot read certificate resource: " + INCORRECT_PATH, exception.getMessage());
 
     }
 
     @Test
-    public void loadPrivateKey_withPrivateKeyNotNull() throws IOException {
+    void load_WhenConfigIncorrectKnownHostsPath_ShouldThrowException() {
+        when(configuration.getKnownHostsUri()).thenReturn(INCORRECT_PATH);
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+        assertEquals("Cannot read KnownHostsIS resource: " + INCORRECT_PATH, exception.getMessage());
+    }
+
+    @Test
+    void load_WhenConfigIncorrectPrivateKeyPath_ShouldThrowException() {
+        when(configuration.getPrivateKeyUri()).thenReturn(INCORRECT_PATH);
+        Exception exception = assertThrows(SftpClientException.class, () -> securityProvider.resolve(configuration));
+        assertEquals("Cannot read PrivateKey resource: " + INCORRECT_PATH, exception.getMessage());
+    }
+
+
+
+    @Test
+    public void resolve_WhenPrivateKeyConfigured_ShouldLoadPrivateKey() throws IOException {
         byte[] expected = readBytes(PRIVATE_KEY_PATH);
-        assertArrayEquals(expected, securityProvider.loadPrivateKey(PRIVATE_KEY_PATH));
+        when(configuration.getPrivateKeyUri()).thenReturn(PRIVATE_KEY_PATH);
+        assertArrayEquals(expected, securityProvider.resolve(configuration).privateKey());
     }
 
     @Test
-    public void resolveCertificate_withCertificateFileNotNull() throws IOException {
+    public void resolve_WhenCertificateFileConfigured_ShouldLoadCertificate() throws IOException {
         var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
         byte[] expected = readBytes(CERT_EXAMPLE);
 
         when(configuration.getCertFile()).thenReturn(uri.getPath());
 
-        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
-    }
-
-    private byte @NonNull [] readBytes(String certExample) throws IOException {
-        byte[] expected;
-        try (InputStream input = getClass()
-                .getClassLoader()
-                .getResourceAsStream(certExample)) {
-
-            expected = input.readAllBytes();
-        }
-        return expected;
+        assertArrayEquals(expected, securityProvider.resolve(configuration).certificate());
     }
 
     @Test
-    public void resolveCertificate_withCertificateUriNotNull() throws IOException {
+    public void resolve_WhenCertificateUriConfigured_ShouldLoadCertificate() throws IOException {
         var uri = getClass().getClassLoader().getResource(CERT_EXAMPLE);
 
         when(configuration.getCertUri()).thenReturn(uri.toString());
         byte[] expected = readBytes(CERT_EXAMPLE);
 
-        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
+        assertArrayEquals(expected, securityProvider.resolve(configuration).certificate());
     }
 
     @Test
-    public void resolveCertificate_withCertBytesNotNull() throws IOException {
+    public void resolve_WhenCertificateBytesConfigured_ShouldUseCertificateBytes() throws IOException {
         byte[] expected = readBytes(CERT_EXAMPLE);
         when(configuration.getCertBytes()).thenReturn(expected);
 
-        assertArrayEquals(expected, securityProvider.resolveCertificateBytes(configuration));
+        assertArrayEquals(expected, securityProvider.resolve(configuration).certificate());
     }
 
     @Test
-    public void loadKnownHostsIS() throws IOException {
+    public void resolve_WhenKnownHostsConfigured_ShouldLoadKnownHosts() throws IOException {
         byte[] expected = readBytes("known_hosts");
-        byte[] actual = securityProvider.loadKnownHostsIS("known_hosts").readAllBytes();
+        when(configuration.getKnownHostsUri()).thenReturn("known_hosts");
+        byte[] actual = securityProvider.resolve(configuration).knownHostsIS().readAllBytes();
         assertArrayEquals(expected, actual);
 
     }
 
     @Test
-    public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNotNull_ShouldReturnNull() throws IOException {
-        byte[] certData = readBytes(CERT_EXAMPLE);
-        assertNull(securityProvider.calculateCertKeyType("PublicKeyAcceptedAlgorithms", certData));
+    public void resolve_WhenPublicKeyAcceptedAlgorithmsConfigured_ShouldNotDetectCertKeyType() throws IOException {
+        when(configuration.getPublicKeyAcceptedAlgorithms()).thenReturn("PublicKeyAcceptedAlgorithms");
+        assertNull(securityProvider.resolve(configuration).certKeyType());
     }
 
     @Test
-    public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnKeyTypeSshRsaCert() throws IOException {
+    public void resolve_WhenCertificateContainsLegacyKeyType_ShouldDetectKeyType() throws IOException {
         String certType = "ssh-rsa-cert";
         byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
-        assertEquals(certType, securityProvider.calculateCertKeyType(null, cert));
+        when(configuration.getCertBytes()).thenReturn(cert);
+        assertEquals(certType, securityProvider.resolve(configuration).certKeyType());
     }
 
     @Test
-    public void calculateCertKeyType_withPublicKeyAcceptedAlgorithmsIsNull_ShouldReturnAlgorithmsKeyType() throws IOException {
+    public void resolve_WhenCertificateContainsOpenSshKeyType_ShouldDetectKeyType() throws IOException {
         String certType = "ssh-ed25519-cert-v01@openssh.com";
         byte[] cert = (certType + " AAAA123").getBytes(StandardCharsets.UTF_8);
-        assertEquals(certType, securityProvider.calculateCertKeyType(null, cert));
+        when(configuration.getCertBytes()).thenReturn(cert);
+        assertEquals(certType, securityProvider.resolve(configuration).certKeyType());
+    }
+
+    private byte @NonNull [] readBytes(String resourceName) throws IOException {
+        try (InputStream input = getClass()
+                .getClassLoader()
+                .getResourceAsStream(resourceName)) {
+
+            assertNotNull(input, () -> "Test resource not found: " + resourceName);
+            return input.readAllBytes();
+        }
     }
 }

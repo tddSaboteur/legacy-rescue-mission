@@ -5,7 +5,6 @@ import org.apache.camel.LoggingLevel;
 
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.SftpConfiguration;
-import org.apache.camel.component.file.remote.SftpEndpoint;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.util.HomeHelper;
 import org.apache.camel.util.ObjectHelper;
@@ -166,11 +165,7 @@ public class JschSftpClient implements SftpClient {
     @Override
     public void init(JschSetup jschSetup) {
         var sftpConfig = jschSetup.sftpConfig();
-
-        byte[] certData = securityProvider.resolveCertificateBytes(sftpConfig);
-        String certKeyType = securityProvider.calculateCertKeyType(sftpConfig.getPublicKeyAcceptedAlgorithms(), certData);
-        InputStream knownHostIS = securityProvider.loadKnownHostsIS(sftpConfig.getKnownHostsUri());
-        byte[] privateKey = securityProvider.loadPrivateKey(sftpConfig.getPrivateKeyUri());
+        SecurityMaterials securityMaterials = securityProvider.resolve(sftpConfig);
 
         JSch.setLogger(new JSchLogger(jschSetup.sftpConfig().getJschLoggingLevel()));
         jsch = new JSch();
@@ -199,14 +194,14 @@ public class JschSftpClient implements SftpClient {
             if (isNotEmpty(jschSetup.sftpConfig().getPrivateKeyPassphrase())) {
                 passphrase = jschSetup.sftpConfig().getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
             }
-            if (certData != null) {
+            if (securityMaterials.certificate() != null) {
                 // Use byte-based overload for certificate — JSch's file-based
                 // addIdentity(prvkey, pubkey, passphrase) treats the second parameter
                 // as a public key file, not a certificate
                 LOG.debug("Using OpenSSH certificate for authentication");
                 try {
                     byte[] keyData = Files.readAllBytes(Paths.get(jschSetup.sftpConfig().getPrivateKeyFile()));
-                    configureJSchIdentity(jschSetup.sftpConfig().getPrivateKeyFile(), keyData, certData, passphrase);
+                    configureJSchIdentity(jschSetup.sftpConfig().getPrivateKeyFile(), keyData, securityMaterials.certificate(), passphrase);
                 } catch (IOException e) {
                     throw new SftpClientException("Cannot read private key file: " + jschSetup.sftpConfig().getPrivateKeyFile(), e);
                 }
@@ -222,7 +217,7 @@ public class JschSftpClient implements SftpClient {
             if (isNotEmpty(jschSetup.sftpConfig().getPrivateKeyPassphrase())) {
                 passphrase = jschSetup.sftpConfig().getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
             }
-            configureJSchIdentity("ID", jschSetup.sftpConfig().getPrivateKey(),certData, passphrase);
+            configureJSchIdentity("ID", jschSetup.sftpConfig().getPrivateKey(),securityMaterials.certificate(), passphrase);
         }
 
         if (jschSetup.sftpConfig().getKeyPair() != null) {
@@ -235,7 +230,7 @@ public class JschSftpClient implements SftpClient {
                 sb.append(Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded())).append("\n");
                 sb.append("-----END PRIVATE KEY-----").append("\n");
 
-                configureJSchIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), certData, null);
+                configureJSchIdentity("ID", sb.toString().getBytes(StandardCharsets.UTF_8), securityMaterials.certificate(), null);
             } else {
                 LOG.warn("PrivateKey in the KeyPair must be filled");
             }
@@ -244,14 +239,14 @@ public class JschSftpClient implements SftpClient {
         if (isNotEmpty(jschSetup.sftpConfig().getPrivateKeyPassphrase())) {
             passphrase = jschSetup.sftpConfig().getPrivateKeyPassphrase().getBytes(StandardCharsets.UTF_8);
         }
-        if (privateKey != null) {
-            configureJSchIdentity("ID", privateKey, certData, passphrase);
+        if (securityMaterials.privateKey() != null) {
+            configureJSchIdentity("ID", securityMaterials.privateKey(), securityMaterials.certificate(), passphrase);
         }
-        if (knownHostIS != null) {
-            configureJSchKnownHost(knownHostIS);
+        if (securityMaterials.knownHostsIS() != null) {
+            configureJSchKnownHost(securityMaterials.knownHostsIS());
         }
 
-        createSession(jschSetup.sftpConfig(), certKeyType);
+        createSession(jschSetup.sftpConfig(), securityMaterials.certKeyType());
         LOG.trace("Channel isn't connected, trying to recreate and connect.");
         openChannel(jschSetup.sftpConfig().getFilenameEncoding(), jschSetup.sftpConfig().getConnectTimeout());
         if (LOG.isDebugEnabled()) {

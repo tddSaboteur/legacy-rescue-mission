@@ -11,10 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -42,6 +38,7 @@ class SftpOperationsConnectDeepTest {
     @Test
     public void connect_widthRetryConfigurationIfException_shouldTryToConnect() {
         when(endpoint.getMaximumReconnectAttempts()).thenReturn(10);
+        when(sftpClient.isConnected()).thenReturn(false);
         doThrow(SftpClientException.class)
                 .when(sftpClient).init(any());
 
@@ -52,6 +49,7 @@ class SftpOperationsConnectDeepTest {
 
     @Test
     public void connect_widthRetryConfiguration_shouldTryToConnect() {
+        when(sftpClient.isConnected()).thenReturn(false);
         when(endpoint.getMaximumReconnectAttempts()).thenReturn(10);
         doThrow(SftpClientException.class)
                 .doThrow(SftpClientException.class)

@@ -1,13 +1,12 @@
 package org.apache.camel.component.file.remote;
 
-import com.jcraft.jsch.ChannelSftp;
-import com.jcraft.jsch.SftpATTRS;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
@@ -16,8 +15,7 @@ import java.util.Vector;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SftpOperationsTest {
@@ -42,6 +40,7 @@ class SftpOperationsTest {
     public void connect_WhenClientIsAlreadyConnected_ShouldReturnOk() {
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTED);
         assertTrue(sftp.connect(null, null));
+        verify(sftpClient, never()).init(any());
     }
 
     @Test

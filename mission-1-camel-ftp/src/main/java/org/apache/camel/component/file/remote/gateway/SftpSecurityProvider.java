@@ -24,7 +24,16 @@ public class SftpSecurityProvider {
         this.camelContext = camelContext;
     }
 
-    public byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
+    public SecurityMaterials resolve(BaseSftpConfiguration config) {
+        byte[] certData = resolveCertificateBytes(config);
+        return new SecurityMaterials(certData,
+                loadPrivateKey(config.getPrivateKeyUri()),
+                loadKnownHostsIS(config.getKnownHostsUri()),
+                calculateCertKeyType(config.getPublicKeyAcceptedAlgorithms(),certData)
+        );
+    }
+    //todo данный порядок это контракт или случайноя последовательность почему байты  идут последними, ведь это уже готовый вариант.
+    private byte[] resolveCertificateBytes(BaseSftpConfiguration config) throws SftpClientException {
         if (isNotEmpty(config.getCertFile())) {
             return loadCertFromFile(config.getCertFile());
         }
@@ -38,7 +47,7 @@ public class SftpSecurityProvider {
     }
 
     private byte[] loadCertFromFile(String filePath) {
-        try  {
+        try {
             return readResourceBytes("file:" + filePath);
         } catch (IOException e) {
             throw new SftpClientException("Cannot read certificate file: " + filePath, e);
@@ -53,27 +62,27 @@ public class SftpSecurityProvider {
         }
     }
 
-    public byte[] loadPrivateKey(String privateKeyUri) {
+    private byte[] loadPrivateKey(String privateKeyUri) {
         byte[] privateKey = null;
         if (privateKeyUri != null) {
             LOG.debug("Using private key uri : {}", privateKeyUri);
             try {
                 privateKey = readResourceBytes(privateKeyUri);
             } catch (IOException e) {
-                throw new SftpClientException("Cannot read resource: " + privateKeyUri, e);
+                throw new SftpClientException("Cannot read PrivateKey resource: " + privateKeyUri, e);
             }
         }
         return privateKey;
     }
 
-    public InputStream loadKnownHostsIS(String knownHostsUri) {
+    private InputStream loadKnownHostsIS(String knownHostsUri) {
         InputStream knownHostIS = null;
         if (isNotEmpty(knownHostsUri)) {
             LOG.debug("Using known hosts uri: {}", knownHostsUri);
             try {
                 knownHostIS = openResource(knownHostsUri);
             } catch (IOException e) {
-                throw new SftpClientException("Cannot read resource: " + knownHostsUri, e);
+                throw new SftpClientException("Cannot read KnownHostsIS resource: " + knownHostsUri, e);
             }
         }
         return knownHostIS;
@@ -83,6 +92,7 @@ public class SftpSecurityProvider {
         InputStream is = openResource(uri);
         return readByteOfInputStream(is);
     }
+
     private static byte[] readByteOfInputStream(InputStream is) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         IOHelper.copyAndCloseInput(is, bos);
@@ -100,7 +110,7 @@ public class SftpSecurityProvider {
     // drafts). If the loaded certificate uses a key type not in the accepted list,
     // JSch silently skips the certificate identity and auth fails.
     // Detect the cert type and add it if missing.
-    public String calculateCertKeyType(String publicKeyAcceptedAlgorithms, byte[] certData) {
+    private String calculateCertKeyType(String publicKeyAcceptedAlgorithms, byte[] certData) {
         String certKeyType = null;
         if (publicKeyAcceptedAlgorithms == null) {
             certKeyType = detectCertKeyType(certData);
