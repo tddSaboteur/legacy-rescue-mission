@@ -60,11 +60,14 @@
   * [x] Переписывание unit-тестов под новое лаконичное API.
   * [x] Написание глубоких проверок (ассертов) на корректность маппинга ресурсов инфраструктуры Camel.
   * *Точка фиксации:* Тег `v1.6.0-security-materials-consolidated`
+
+- [x] **Вылазка #12: **
+  * [x] Вводим стерильный record `SftpFileMetadata` вместо протекающего из JSch `ChannelSftp.LsEntry`.
+  * *Точка фиксации:* Тег `v1.7.0-lsentry-completely-extinguished`
 ---
 
 ## 🎯 В процессе (Текущий рубеж)
-- [ ] **Вылазка #12: **
-  * [ ] Вводим стерильный record `SftpFileMetadata` вместо протекающего из JSch `ChannelSftp.LsEntry`.
+- [x] **Вылазка #13: **
   * [ ] Анализ и разбивка на логические модули метода `SftpOpraration.retrieveFileToFileInLocalWorkDirectory()`.
 ---
 
