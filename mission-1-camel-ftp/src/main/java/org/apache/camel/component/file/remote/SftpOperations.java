@@ -30,7 +30,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
-import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.Proxy;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadException;
@@ -547,8 +546,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private boolean retrieveFileToStreamInBody(String name, Exchange exchange) throws GenericFileOperationFailedException {
         try {
             String currentDir = null;
-            GenericFile<ChannelSftp.LsEntry> target
-                    = (GenericFile<ChannelSftp.LsEntry>) exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE);
+            GenericFile<SftpFileMetadata> target
+                    = getGenericFile(exchange);
             ObjectHelper.notNull(target, "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
 
             String remoteName = name;
@@ -599,6 +598,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
     }
 
+    private static GenericFile getGenericFile(Exchange exchange) {
+        return (GenericFile) exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE);
+    }
+
 
     @SuppressWarnings("unchecked")
         private boolean retrieveFileToFileInLocalWorkDirectory(String name, Exchange exchange)
@@ -606,8 +609,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             File temp;
             File local = new File(endpoint.getLocalWorkDirectory());
             OutputStream os;
-            GenericFile<ChannelSftp.LsEntry> file
-                    = (GenericFile<ChannelSftp.LsEntry>) exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE);
+            GenericFile<SftpFileMetadata> file
+                    = getGenericFile(exchange);
             ObjectHelper.notNull(file, "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
             try {
                 // use relative filename in local work directory
