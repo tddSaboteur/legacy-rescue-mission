@@ -22,6 +22,8 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SftpOperationsTest {
+    public static final String MY_PATH = "MY_PATH";
+    public static final SftpFileMetadata FULL_SFTP_FILE_METADATA = new SftpFileMetadata("FILENAME", "LONG_NAME", 11L, 1, false);
     private static final String FILE_TO_DELETE = "file";
     private final boolean CLIENT_IS_ALREADY_CONNECTED = true;
     private final boolean CLIENT_IS_NOT_CONNECTED = false;
@@ -150,24 +152,26 @@ class SftpOperationsTest {
 
     @Test
     public void listFiles_mustReturnVectorSftpFileMetadata(){
-        String path = "MY_PATH";
-        SftpFileMetadata metadata = new SftpFileMetadata("FILENAME", "LONG_NAME", 11L, 1, false);
-        List<SftpFileMetadata> stub = List.of(metadata);
-        when(sftpClient.ls(path)).thenReturn(stub);
-        var  res = sftp.listFiles(path);
+        List<SftpFileMetadata> stub = List.of(FULL_SFTP_FILE_METADATA);
+        when(sftpClient.ls(MY_PATH)).thenReturn(stub);
+        var  res = sftp.listFiles(MY_PATH);
         assertTrue(res.length>0);
         assertNotNull(res);
 
         var actualRemoteFiles = Arrays.stream(res).iterator().next().getRemoteFile();
-        assertEquals(metadata,actualRemoteFiles);
+        assertEquals(FULL_SFTP_FILE_METADATA,actualRemoteFiles);
     }
 
     @Test
-    //todo нельзя проверить потому что не могу создать LsEntry из за конструктора.
-    public void listFiles_WithParameters(){
-        String path = "MY_PATH";
-        when(sftpClient.ls(path)).thenReturn(new Vector<>());
-        sftp.listFiles(path);
+    public void listFiles_WithEmptyParameters_mustReturnVectorSftpFileMetadata(){
+        String THIS_PATH = ".";
+
+        when(sftpClient.ls(THIS_PATH)).thenReturn(List.of(FULL_SFTP_FILE_METADATA));
+        var res = sftp.listFiles();
+        verify(sftpClient).ls(THIS_PATH);
+
+        var actualRemoteFiles = Arrays.stream(res).iterator().next().getRemoteFile();
+        assertEquals(FULL_SFTP_FILE_METADATA,actualRemoteFiles);
     }
 
     @Test
