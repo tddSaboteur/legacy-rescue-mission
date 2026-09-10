@@ -24,6 +24,7 @@ import static org.mockito.Mockito.*;
 class SftpOperationsTest {
     public static final String MY_PATH = "MY_PATH";
     public static final SftpFileMetadata FULL_SFTP_FILE_METADATA = new SftpFileMetadata("FILENAME", "LONG_NAME", 11L, 1, false);
+    public static final String THIS_PATH = ".";
     private static final String FILE_TO_DELETE = "file";
     private final boolean CLIENT_IS_ALREADY_CONNECTED = true;
     private final boolean CLIENT_IS_NOT_CONNECTED = false;
@@ -164,7 +165,6 @@ class SftpOperationsTest {
 
     @Test
     public void listFiles_WithEmptyParameters_mustReturnVectorSftpFileMetadata(){
-        String THIS_PATH = ".";
 
         when(sftpClient.ls(THIS_PATH)).thenReturn(List.of(FULL_SFTP_FILE_METADATA));
         var res = sftp.listFiles();
@@ -206,9 +206,11 @@ class SftpOperationsTest {
 
     @Test
     //todo пока оставим там, далее нужно проверить логику
-    public void existsFile_shouldDelegateToSftpClientPut(){
+    public void exists_shouldReturnTrue_whenFileExists(){
         sftp.setEndpoint(endpoint);
-        sftp.existsFile("NAME");
+        when(sftpClient.ls(THIS_PATH)).thenReturn(List.of(FULL_SFTP_FILE_METADATA));
+
+        assertTrue(sftp.existsFile("NAME"));
     }
 
     @Test
