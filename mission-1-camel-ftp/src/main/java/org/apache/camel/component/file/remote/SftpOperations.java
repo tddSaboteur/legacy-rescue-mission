@@ -872,15 +872,15 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             String onlyName = FileUtil.stripPath(name);
 
             try {
-                @SuppressWarnings("rawtypes")
-                List files = jschClient.ls(directory);
+
+                List<SftpFileMetadata> files = jschClient.ls(directory);
                 // can return either null or an empty list depending on FTP servers
                 if (files == null) {
                     return false;
                 }
-                for (Object file : files) {
-                    ChannelSftp.LsEntry entry = (ChannelSftp.LsEntry) file;
-                    String existing = entry.getFilename();
+                for (SftpFileMetadata file : files) {
+
+                    String existing = file.filename();
                     LOG.trace("Existing file: {}, target file: {}", existing, name);
                     existing = FileUtil.stripPath(existing);
                     if (existing != null && existing.equals(onlyName)) {

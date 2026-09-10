@@ -210,7 +210,7 @@ class SftpOperationsTest {
         sftp.setEndpoint(endpoint);
         when(sftpClient.ls(THIS_PATH)).thenReturn(List.of(FULL_SFTP_FILE_METADATA));
 
-        assertTrue(sftp.existsFile("NAME"));
+        assertTrue(sftp.existsFile("FILENAME"));
     }
 
     @Test
