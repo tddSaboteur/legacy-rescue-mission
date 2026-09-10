@@ -1,6 +1,7 @@
 package org.apache.camel.component.file.remote;
 
 import org.apache.camel.component.file.remote.gateway.SftpClient;
+import org.apache.camel.component.file.remote.gateway.SftpFileMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Vector;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -146,11 +149,17 @@ class SftpOperationsTest {
     }
 
     @Test
-    //todo нельзя проверить потому что не могу создать LsEntry из за конструктора.
-    public void listFiles(){
+    public void listFiles_mustReturnVectorSftpFileMetadata(){
         String path = "MY_PATH";
-        when(sftpClient.ls(path)).thenReturn(new Vector<>());
-        sftp.listFiles(path);
+        SftpFileMetadata metadata = new SftpFileMetadata("FILENAME", "LONG_NAME", 11L, 1, false);
+
+        when(sftpClient.ls(path)).thenReturn(List.of(metadata));
+        var  res = sftp.listFiles(path);
+        assertTrue(res.length>0);
+        assertNotNull(res);
+
+        var actualRemoteFiles = Arrays.stream(res).iterator().next().getRemoteFile();
+        assertEquals(metadata,actualRemoteFiles);
     }
 
     @Test
