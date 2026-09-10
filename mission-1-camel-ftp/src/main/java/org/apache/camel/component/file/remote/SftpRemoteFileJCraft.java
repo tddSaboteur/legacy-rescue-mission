@@ -17,42 +17,43 @@
 package org.apache.camel.component.file.remote;
 
 import com.jcraft.jsch.ChannelSftp;
+import org.apache.camel.component.file.remote.gateway.SftpFileMetadata;
 
-public class SftpRemoteFileJCraft implements SftpRemoteFile<ChannelSftp.LsEntry> {
+public class SftpRemoteFileJCraft implements SftpRemoteFile<SftpFileMetadata> {
 
-    private final ChannelSftp.LsEntry entry;
+    private final SftpFileMetadata metadata;
 
-    public SftpRemoteFileJCraft(ChannelSftp.LsEntry entry) {
-        this.entry = entry;
+    public SftpRemoteFileJCraft(SftpFileMetadata metadata) {
+        this.metadata = metadata;
     }
 
     @Override
-    public ChannelSftp.LsEntry getRemoteFile() {
-        return entry;
+    public SftpFileMetadata getRemoteFile() {
+        return metadata;
     }
 
     @Override
     public String getFilename() {
-        return entry.getFilename();
+        return metadata.filename();
     }
 
     @Override
     public String getLongname() {
-        return entry.getLongname();
+        return metadata.longname();
     }
 
     @Override
     public boolean isDirectory() {
-        return entry.getAttrs().isDir();
+        return metadata.dir();
     }
 
     @Override
     public long getFileLength() {
-        return entry.getAttrs().getSize();
+        return metadata.length();
     }
 
     @Override
     public long getLastModified() {
-        return entry.getAttrs().getMTime() * 1000L;
+        return metadata.MTime() * 1000L;
     }
 }

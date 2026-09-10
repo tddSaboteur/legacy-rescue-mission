@@ -1,16 +1,26 @@
 package org.apache.camel.component.file.remote;
 
+import org.apache.camel.Exchange;
+import org.apache.camel.Message;
+import org.apache.camel.component.file.FileComponent;
+import org.apache.camel.component.file.GenericFile;
+import org.apache.camel.component.file.GenericFileBinding;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
+import org.apache.camel.component.file.remote.gateway.SftpFileMetadata;
+import org.apache.camel.support.DefaultExchange;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
-import java.util.Vector;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -19,7 +29,11 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SftpOperationsTest {
-    private static final String FILE_TO_DELETE = "file";
+    public static final String MY_PATH = "MY_PATH";
+    public static final String TEST_FILENAME = "FILENAME";
+
+    public static final SftpFileMetadata FULL_SFTP_FILE_METADATA = new SftpFileMetadata(TEST_FILENAME, "LONG_NAME", 11L, 1, false);
+    public static final String THIS_PATH = ".";
     private final boolean CLIENT_IS_ALREADY_CONNECTED = true;
     private final boolean CLIENT_IS_NOT_CONNECTED = false;
 
@@ -79,8 +93,8 @@ class SftpOperationsTest {
 
         sftp.setEndpoint(endpoint);
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTED);
-        assertTrue(sftp.deleteFile(FILE_TO_DELETE));
-        verify(sftpClient).rm(FILE_TO_DELETE);
+        assertTrue(sftp.deleteFile(TEST_FILENAME));
+        verify(sftpClient).rm(TEST_FILENAME);
     }
 
     @Test
@@ -91,8 +105,8 @@ class SftpOperationsTest {
         when(endpoint.getConfiguration()).thenReturn(configuration);
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_NOT_CONNECTED);
 
-        assertTrue(sftp.deleteFile(FILE_TO_DELETE));
-        verify(sftpClient).rm(FILE_TO_DELETE);
+        assertTrue(sftp.deleteFile(TEST_FILENAME));
+        verify(sftpClient).rm(TEST_FILENAME);
     }
 
     @Test
@@ -146,27 +160,44 @@ class SftpOperationsTest {
     }
 
     @Test
-    //todo нельзя проверить потому что не могу создать LsEntry из за конструктора.
-    public void listFiles(){
-        String path = "MY_PATH";
-        when(sftpClient.ls(path)).thenReturn(new Vector<>());
-        sftp.listFiles(path);
+    public void listFiles_mustReturnVectorSftpFileMetadata(){
+        List<SftpFileMetadata> stub = List.of(FULL_SFTP_FILE_METADATA);
+        when(sftpClient.ls(MY_PATH)).thenReturn(stub);
+        var  res = sftp.listFiles(MY_PATH);
+        assertTrue(res.length>0);
+        assertNotNull(res);
+
+        var actualRemoteFiles = Arrays.stream(res).iterator().next().getRemoteFile();
+        assertEquals(FULL_SFTP_FILE_METADATA,actualRemoteFiles);
     }
 
     @Test
-    //todo нельзя проверить потому что не могу создать LsEntry из за конструктора.
-    public void listFiles_WithParameters(){
-        String path = "MY_PATH";
-        when(sftpClient.ls(path)).thenReturn(new Vector<>());
-        sftp.listFiles(path);
+    public void listFiles_WithEmptyParameters_mustReturnVectorSftpFileMetadata(){
+
+        when(sftpClient.ls(THIS_PATH)).thenReturn(List.of(FULL_SFTP_FILE_METADATA));
+        var res = sftp.listFiles();
+        verify(sftpClient).ls(THIS_PATH);
+
+        var actualRemoteFiles = Arrays.stream(res).iterator().next().getRemoteFile();
+        assertEquals(FULL_SFTP_FILE_METADATA,actualRemoteFiles);
     }
 
     @Test
-    @Disabled
-    //todo здесь пока нельзя проверить без camel.exchange
-    public void retrieveFile(){
+    public void retrieveFile_shouldCorrectlyProcessGenericFile(){
         sftp.setEndpoint(endpoint);
-        sftp.retrieveFile(null,null,0);
+        GenericFile<SftpFileMetadata> file = new GenericFile<>();
+        Exchange exchange = mock(Exchange.class);
+        Message message = mock(Message.class);
+        when(exchange.getIn()).thenReturn(message);
+
+        when(endpoint.getConfiguration()).thenReturn(configuration);
+        when(sftpClient.get(anyString())).thenReturn(InputStream.nullInputStream());
+
+        when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE))
+                .thenReturn(file);
+
+        assertTrue(sftp.retrieveFile(TEST_FILENAME,exchange,-1));
+        verify(sftpClient).get(anyString());
     }
 
     @Test
@@ -186,16 +217,16 @@ class SftpOperationsTest {
     @Test
     public void storeFileDirectly_shouldDelegateToSftpClientPut(){
         String payload = "PAYLOAD";
-        String name = "NAME";
-        sftp.storeFileDirectly(name,payload);
-        verify(sftpClient).put(eq(name),any(ByteArrayInputStream.class));
+        sftp.storeFileDirectly(TEST_FILENAME,payload);
+        verify(sftpClient).put(eq(TEST_FILENAME),any(ByteArrayInputStream.class));
     }
 
     @Test
-    //todo пока оставим там, далее нужно проверить логику
-    public void existsFile_shouldDelegateToSftpClientPut(){
+    public void exists_shouldReturnTrue_whenFileExists(){
         sftp.setEndpoint(endpoint);
-        sftp.existsFile("NAME");
+        when(sftpClient.ls(THIS_PATH)).thenReturn(List.of(FULL_SFTP_FILE_METADATA));
+
+        assertTrue(sftp.existsFile(TEST_FILENAME));
     }
 
     @Test

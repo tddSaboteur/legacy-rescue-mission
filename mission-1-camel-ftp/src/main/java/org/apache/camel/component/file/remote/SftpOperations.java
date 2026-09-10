@@ -26,12 +26,10 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.time.Duration;
 import java.util.List;
-import java.util.Vector;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
-import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.Proxy;
 import org.apache.camel.Exchange;
 import org.apache.camel.InvalidPayloadException;
@@ -42,10 +40,7 @@ import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
-import org.apache.camel.component.file.remote.gateway.JschSetup;
-import org.apache.camel.component.file.remote.gateway.JschSftpClient;
-import org.apache.camel.component.file.remote.gateway.SftpClient;
-import org.apache.camel.component.file.remote.gateway.SftpSecurityProvider;
+import org.apache.camel.component.file.remote.gateway.*;
 import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
@@ -497,10 +492,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 path = ".";
             }
 
-            Vector<?> files = jschClient.ls(path);
+            List<SftpFileMetadata> files = jschClient.ls(path);
 
             return files.stream()
-                    .map(f -> new SftpRemoteFileJCraft((ChannelSftp.LsEntry) f))
+                    .map(SftpRemoteFileJCraft::new)
                     .toArray(SftpRemoteFileJCraft[]::new);
         } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot list directory: " + path, e);
@@ -551,8 +546,8 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
     private boolean retrieveFileToStreamInBody(String name, Exchange exchange) throws GenericFileOperationFailedException {
         try {
             String currentDir = null;
-            GenericFile<ChannelSftp.LsEntry> target
-                    = (GenericFile<ChannelSftp.LsEntry>) exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE);
+            GenericFile<SftpFileMetadata> target
+                    = getGenericFile(exchange);
             ObjectHelper.notNull(target, "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
 
             String remoteName = name;
@@ -603,121 +598,125 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
     }
 
+    private static GenericFile getGenericFile(Exchange exchange) {
+        return (GenericFile) exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE);
+    }
+
 
     @SuppressWarnings("unchecked")
-    private boolean retrieveFileToFileInLocalWorkDirectory(String name, Exchange exchange)
-            throws GenericFileOperationFailedException {
-        File temp;
-        File local = new File(endpoint.getLocalWorkDirectory());
-        OutputStream os;
-        GenericFile<ChannelSftp.LsEntry> file
-                = (GenericFile<ChannelSftp.LsEntry>) exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE);
-        ObjectHelper.notNull(file, "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
-        try {
-            // use relative filename in local work directory
-            String relativeName = file.getRelativeFilePath();
+        private boolean retrieveFileToFileInLocalWorkDirectory(String name, Exchange exchange)
+                throws GenericFileOperationFailedException {
+            File temp;
+            File local = new File(endpoint.getLocalWorkDirectory());
+            OutputStream os;
+            GenericFile<SftpFileMetadata> file
+                    = getGenericFile(exchange);
+            ObjectHelper.notNull(file, "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
+            try {
+                // use relative filename in local work directory
+                String relativeName = file.getRelativeFilePath();
 
-            File localWorkDir = local;
-            temp = new File(local, relativeName + ".inprogress");
-            local = new File(local, relativeName);
+                File localWorkDir = local;
+                temp = new File(local, relativeName + ".inprogress");
+                local = new File(local, relativeName);
 
-            // ensure the local work file stays within the local work directory (CAMEL-23765)
-            if (endpoint.isJailStartingDirectory()) {
-                GenericFileHelper.jailToLocalWorkDirectory(temp, localWorkDir);
-                GenericFileHelper.jailToLocalWorkDirectory(local, localWorkDir);
-            }
-
-            // create directory to local work file
-            local.mkdirs();
-
-            // delete any existing files
-            if (temp.exists()) {
-                if (!FileUtil.deleteFile(temp)) {
-                    throw new GenericFileOperationFailedException("Cannot delete existing local work file: " + temp);
+                // ensure the local work file stays within the local work directory (CAMEL-23765)
+                if (endpoint.isJailStartingDirectory()) {
+                    GenericFileHelper.jailToLocalWorkDirectory(temp, localWorkDir);
+                    GenericFileHelper.jailToLocalWorkDirectory(local, localWorkDir);
                 }
-            }
-            if (local.exists()) {
-                if (!FileUtil.deleteFile(local)) {
-                    throw new GenericFileOperationFailedException("Cannot delete existing local work file: " + local);
+
+                // create directory to local work file
+                local.mkdirs();
+
+                // delete any existing files
+                if (temp.exists()) {
+                    if (!FileUtil.deleteFile(temp)) {
+                        throw new GenericFileOperationFailedException("Cannot delete existing local work file: " + temp);
+                    }
                 }
-            }
-
-            // create new temp local work file
-            if (!temp.createNewFile()) {
-                throw new GenericFileOperationFailedException("Cannot create new local work file: " + temp);
-            }
-
-            // store content as a file in the local work directory in the temp
-            // handle
-            os = new FileOutputStream(temp);
-
-            // set header with the path to the local work file
-            exchange.getIn().setHeader(FtpConstants.FILE_LOCAL_WORK_PATH, local.getPath());
-        } catch (Exception e) {
-            throw new GenericFileOperationFailedException("Cannot create new local work file: " + local, e);
-        }
-        try {
-            String currentDir = null;
-            // store the java.io.File handle as the body
-            file.setBody(local);
-
-            String remoteName = name;
-            if (endpoint.getConfiguration().isStepwise()) {
-                // remember current directory
-                currentDir = getCurrentDirectory();
-
-                // change directory to path where the file is to be retrieved
-                // (must do this as some FTP servers cannot retrieve using
-                // absolute path)
-                String path = FileUtil.onlyPath(name);
-                if (path != null) {
-                    changeCurrentDirectory(path);
+                if (local.exists()) {
+                    if (!FileUtil.deleteFile(local)) {
+                        throw new GenericFileOperationFailedException("Cannot delete existing local work file: " + local);
+                    }
                 }
-                // remote name is now only the file name as we just changed
-                // directory
-                remoteName = FileUtil.stripPath(name);
+
+                // create new temp local work file
+                if (!temp.createNewFile()) {
+                    throw new GenericFileOperationFailedException("Cannot create new local work file: " + temp);
+                }
+
+                // store content as a file in the local work directory in the temp
+                // handle
+                os = new FileOutputStream(temp);
+
+                // set header with the path to the local work file
+                exchange.getIn().setHeader(FtpConstants.FILE_LOCAL_WORK_PATH, local.getPath());
+            } catch (Exception e) {
+                throw new GenericFileOperationFailedException("Cannot create new local work file: " + local, e);
+            }
+            try {
+                String currentDir = null;
+                // store the java.io.File handle as the body
+                file.setBody(local);
+
+                String remoteName = name;
+                if (endpoint.getConfiguration().isStepwise()) {
+                    // remember current directory
+                    currentDir = getCurrentDirectory();
+
+                    // change directory to path where the file is to be retrieved
+                    // (must do this as some FTP servers cannot retrieve using
+                    // absolute path)
+                    String path = FileUtil.onlyPath(name);
+                    if (path != null) {
+                        changeCurrentDirectory(path);
+                    }
+                    // remote name is now only the file name as we just changed
+                    // directory
+                    remoteName = FileUtil.stripPath(name);
+                }
+
+                jschClient.get(remoteName, os);
+
+                // change back to current directory if we changed directory
+                if (currentDir != null) {
+                    changeCurrentDirectory(currentDir);
+                }
+
+            } catch (SftpClientException e) {
+                createResultHeadersFromExchange(e, exchange);
+                LOG.trace("Error occurred during retrieving file: {} to local directory. Deleting local work file: {}", name, temp);
+                // failed to retrieve the file so we need to close streams and
+                // delete in progress file
+                // must close stream before deleting file
+                IOHelper.close(os, "retrieve: " + name, LOG);
+                boolean deleted = FileUtil.deleteFile(temp);
+                if (!deleted) {
+                    LOG.warn("Error occurred during retrieving file: {} to local directory. Cannot delete local work file: {}",
+                            name, temp);
+                }
+                throw new GenericFileOperationFailedException("Cannot retrieve file: " + name, e);
+            } finally {
+                IOHelper.close(os, "retrieve: " + name, LOG);
             }
 
-            jschClient.get(remoteName, os);
+            createResultHeadersFromExchange(null, exchange);
+            LOG.debug("Retrieve file to local work file result: true");
 
-            // change back to current directory if we changed directory
-            if (currentDir != null) {
-                changeCurrentDirectory(currentDir);
+            // operation went okay so rename temp to local after we have retrieved
+            // the data
+            LOG.trace("Renaming local in progress file from: {} to: {}", temp, local);
+            try {
+                if (!FileUtil.renameFile(temp, local, false)) {
+                    throw new GenericFileOperationFailedException("Cannot rename local work file from: " + temp + " to: " + local);
+                }
+            } catch (IOException e) {
+                throw new GenericFileOperationFailedException("Cannot rename local work file from: " + temp + " to: " + local, e);
             }
 
-        } catch (SftpClientException e) {
-            createResultHeadersFromExchange(e, exchange);
-            LOG.trace("Error occurred during retrieving file: {} to local directory. Deleting local work file: {}", name, temp);
-            // failed to retrieve the file so we need to close streams and
-            // delete in progress file
-            // must close stream before deleting file
-            IOHelper.close(os, "retrieve: " + name, LOG);
-            boolean deleted = FileUtil.deleteFile(temp);
-            if (!deleted) {
-                LOG.warn("Error occurred during retrieving file: {} to local directory. Cannot delete local work file: {}",
-                        name, temp);
-            }
-            throw new GenericFileOperationFailedException("Cannot retrieve file: " + name, e);
-        } finally {
-            IOHelper.close(os, "retrieve: " + name, LOG);
+            return true;
         }
-
-        createResultHeadersFromExchange(null, exchange);
-        LOG.debug("Retrieve file to local work file result: true");
-
-        // operation went okay so rename temp to local after we have retrieved
-        // the data
-        LOG.trace("Renaming local in progress file from: {} to: {}", temp, local);
-        try {
-            if (!FileUtil.renameFile(temp, local, false)) {
-                throw new GenericFileOperationFailedException("Cannot rename local work file from: " + temp + " to: " + local);
-            }
-        } catch (IOException e) {
-            throw new GenericFileOperationFailedException("Cannot rename local work file from: " + temp + " to: " + local, e);
-        }
-
-        return true;
-    }
 
 
     @Override
@@ -876,15 +875,15 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             String onlyName = FileUtil.stripPath(name);
 
             try {
-                @SuppressWarnings("rawtypes")
-                List files = jschClient.ls(directory);
+
+                List<SftpFileMetadata> files = jschClient.ls(directory);
                 // can return either null or an empty list depending on FTP servers
                 if (files == null) {
                     return false;
                 }
-                for (Object file : files) {
-                    ChannelSftp.LsEntry entry = (ChannelSftp.LsEntry) file;
-                    String existing = entry.getFilename();
+                for (SftpFileMetadata file : files) {
+
+                    String existing = file.filename();
                     LOG.trace("Existing file: {}, target file: {}", existing, name);
                     existing = FileUtil.stripPath(existing);
                     if (existing != null && existing.equals(onlyName)) {

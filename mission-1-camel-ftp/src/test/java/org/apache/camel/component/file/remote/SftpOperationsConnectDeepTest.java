@@ -4,7 +4,7 @@ package org.apache.camel.component.file.remote;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
-import org.apache.camel.component.file.remote.gateway.SftpSecurityProvider;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,8 +24,6 @@ class SftpOperationsConnectDeepTest {
     SftpConfiguration configuration;
     @Mock
     SftpClient sftpClient;
-    @Mock
-    SftpSecurityProvider securityProvider;
 
 
     @BeforeEach
@@ -61,5 +59,4 @@ class SftpOperationsConnectDeepTest {
 
         verify(sftpClient, times(4)).init(any());
     }
-
 }

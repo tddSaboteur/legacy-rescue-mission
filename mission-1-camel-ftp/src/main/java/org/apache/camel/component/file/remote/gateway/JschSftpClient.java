@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyPair;
 import java.util.Base64;
+import java.util.List;
 import java.util.Vector;
 
 import static org.apache.camel.util.ObjectHelper.isNotEmpty;
@@ -94,9 +95,11 @@ public class JschSftpClient implements SftpClient {
     }
 
     @Override
-    public Vector<?> ls(String path) throws SftpClientException {
+    public List<SftpFileMetadata> ls(String path) throws SftpClientException {
         try {
-            return channel.ls(path);
+            return channel.ls(path).stream()
+                    .map(SftpFileMetadata::fromLsEntry)
+                    .toList();
         } catch (SftpException e) {
             // or an exception can be thrown with id 2 which means file does not
             // exists

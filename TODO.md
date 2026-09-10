@@ -63,8 +63,9 @@
 ---
 
 ## 🎯 В процессе (Текущий рубеж)
-
-
+- [ ] **Вылазка #12: **
+  * [ ] Вводим стерильный record `SftpFileMetadata` вместо протекающего из JSch `ChannelSftp.LsEntry`.
+  * [ ] Анализ и разбивка на логические модули метода `SftpOpraration.retrieveFileToFileInLocalWorkDirectory()`.
 ---
 
 ## 🔮 Ближайшие цели (Выход на TDD-триумф)
