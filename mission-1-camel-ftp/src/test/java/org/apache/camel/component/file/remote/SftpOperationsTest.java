@@ -1,16 +1,24 @@
 package org.apache.camel.component.file.remote;
 
+import org.apache.camel.Exchange;
+import org.apache.camel.Message;
+import org.apache.camel.component.file.FileComponent;
+import org.apache.camel.component.file.GenericFile;
+import org.apache.camel.component.file.GenericFileBinding;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
 import org.apache.camel.component.file.remote.gateway.SftpFileMetadata;
+import org.apache.camel.support.DefaultExchange;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -175,11 +183,21 @@ class SftpOperationsTest {
     }
 
     @Test
-    @Disabled
-    //todo здесь пока нельзя проверить без camel.exchange
-    public void retrieveFile(){
+    public void retrieveFile_shouldCorrectlyProcessGenericFile(){
         sftp.setEndpoint(endpoint);
-        sftp.retrieveFile(null,null,0);
+        GenericFile<SftpFileMetadata> file = new GenericFile<>();
+        Exchange exchange = mock(Exchange.class);
+        Message message = mock(Message.class);
+        when(exchange.getIn()).thenReturn(message);
+
+        when(endpoint.getConfiguration()).thenReturn(configuration);
+        when(sftpClient.get(anyString())).thenReturn(InputStream.nullInputStream());
+
+        when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE))
+                .thenReturn(file);
+
+        assertTrue(sftp.retrieveFile(TEST_FILENAME,exchange,-1));
+        verify(sftpClient).get(anyString());
     }
 
     @Test
