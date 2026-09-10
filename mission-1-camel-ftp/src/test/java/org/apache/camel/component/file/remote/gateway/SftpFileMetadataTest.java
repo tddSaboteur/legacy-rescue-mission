@@ -21,6 +21,7 @@ class SftpFileMetadataTest {
 
     @Test
     void testMapping_empty_entry(){
+        when(entry.getAttrs()).thenReturn(attrs);
         SftpFileMetadata.fromLsEntry(entry);
     }
 
