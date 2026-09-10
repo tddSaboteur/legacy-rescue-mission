@@ -42,10 +42,7 @@ import org.apache.camel.component.file.GenericFileExist;
 import org.apache.camel.component.file.GenericFileHelper;
 import org.apache.camel.component.file.GenericFileOperationFailedException;
 import org.apache.camel.component.file.remote.exception.SftpClientException;
-import org.apache.camel.component.file.remote.gateway.JschSetup;
-import org.apache.camel.component.file.remote.gateway.JschSftpClient;
-import org.apache.camel.component.file.remote.gateway.SftpClient;
-import org.apache.camel.component.file.remote.gateway.SftpSecurityProvider;
+import org.apache.camel.component.file.remote.gateway.*;
 import org.apache.camel.support.task.BlockingTask;
 import org.apache.camel.support.task.Tasks;
 import org.apache.camel.support.task.budget.Budgets;
@@ -497,10 +494,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                 path = ".";
             }
 
-            Vector<?> files = jschClient.ls(path);
+            List<SftpFileMetadata> files = jschClient.ls(path);
 
             return files.stream()
-                    .map(f -> new SftpRemoteFileJCraft((ChannelSftp.LsEntry) f))
+                    .map(SftpRemoteFileJCraft::new)
                     .toArray(SftpRemoteFileJCraft[]::new);
         } catch (SftpClientException e) {
             throw new GenericFileOperationFailedException("Cannot list directory: " + path, e);

@@ -152,8 +152,8 @@ class SftpOperationsTest {
     public void listFiles_mustReturnVectorSftpFileMetadata(){
         String path = "MY_PATH";
         SftpFileMetadata metadata = new SftpFileMetadata("FILENAME", "LONG_NAME", 11L, 1, false);
-
-        when(sftpClient.ls(path)).thenReturn(List.of(metadata));
+        List<SftpFileMetadata> stub = List.of(metadata);
+        when(sftpClient.ls(path)).thenReturn(stub);
         var  res = sftp.listFiles(path);
         assertTrue(res.length>0);
         assertNotNull(res);

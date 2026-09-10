@@ -4,6 +4,7 @@ import org.apache.camel.component.file.remote.exception.SftpClientException;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Vector;
 
 public interface SftpClient {
@@ -18,7 +19,7 @@ public interface SftpClient {
 
     void cd(String path) throws SftpClientException;
 
-    Vector<?> ls(String path) throws SftpClientException;
+    List<SftpFileMetadata> ls(String path) throws SftpClientException;
 
     void lsByBreakSelector(String directory) throws SftpClientException;
 
