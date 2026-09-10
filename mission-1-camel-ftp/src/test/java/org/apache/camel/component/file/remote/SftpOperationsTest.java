@@ -13,7 +13,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Vector;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,9 +22,10 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SftpOperationsTest {
     public static final String MY_PATH = "MY_PATH";
-    public static final SftpFileMetadata FULL_SFTP_FILE_METADATA = new SftpFileMetadata("FILENAME", "LONG_NAME", 11L, 1, false);
+    public static final String TEST_FILENAME = "FILENAME";
+
+    public static final SftpFileMetadata FULL_SFTP_FILE_METADATA = new SftpFileMetadata(TEST_FILENAME, "LONG_NAME", 11L, 1, false);
     public static final String THIS_PATH = ".";
-    private static final String FILE_TO_DELETE = "file";
     private final boolean CLIENT_IS_ALREADY_CONNECTED = true;
     private final boolean CLIENT_IS_NOT_CONNECTED = false;
 
@@ -85,8 +85,8 @@ class SftpOperationsTest {
 
         sftp.setEndpoint(endpoint);
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_ALREADY_CONNECTED);
-        assertTrue(sftp.deleteFile(FILE_TO_DELETE));
-        verify(sftpClient).rm(FILE_TO_DELETE);
+        assertTrue(sftp.deleteFile(TEST_FILENAME));
+        verify(sftpClient).rm(TEST_FILENAME);
     }
 
     @Test
@@ -97,8 +97,8 @@ class SftpOperationsTest {
         when(endpoint.getConfiguration()).thenReturn(configuration);
         when(sftpClient.isConnected()).thenReturn(CLIENT_IS_NOT_CONNECTED);
 
-        assertTrue(sftp.deleteFile(FILE_TO_DELETE));
-        verify(sftpClient).rm(FILE_TO_DELETE);
+        assertTrue(sftp.deleteFile(TEST_FILENAME));
+        verify(sftpClient).rm(TEST_FILENAME);
     }
 
     @Test
@@ -199,18 +199,16 @@ class SftpOperationsTest {
     @Test
     public void storeFileDirectly_shouldDelegateToSftpClientPut(){
         String payload = "PAYLOAD";
-        String name = "NAME";
-        sftp.storeFileDirectly(name,payload);
-        verify(sftpClient).put(eq(name),any(ByteArrayInputStream.class));
+        sftp.storeFileDirectly(TEST_FILENAME,payload);
+        verify(sftpClient).put(eq(TEST_FILENAME),any(ByteArrayInputStream.class));
     }
 
     @Test
-    //todo пока оставим там, далее нужно проверить логику
     public void exists_shouldReturnTrue_whenFileExists(){
         sftp.setEndpoint(endpoint);
         when(sftpClient.ls(THIS_PATH)).thenReturn(List.of(FULL_SFTP_FILE_METADATA));
 
-        assertTrue(sftp.existsFile("FILENAME"));
+        assertTrue(sftp.existsFile(TEST_FILENAME));
     }
 
     @Test
