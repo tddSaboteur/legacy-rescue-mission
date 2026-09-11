@@ -13,13 +13,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class SftpOperationsRetrieveFileDeepTest {
+public class SftpOperationsRetrieveFileTest {
     SftpOperations sftpOperations;
     @Mock
     private SftpEndpoint endpoint;
@@ -35,19 +36,39 @@ public class SftpOperationsRetrieveFileDeepTest {
     }
 
     @Test
-    public void retrieveFile(){
-        GenericFile<?> file = mock(GenericFile.class);
+    public void retrieveFile_whenStoreFileContentDirectoryAsStreamOnTheBody(){
+
         Exchange exchange = mock(Exchange.class);
         Message message = mock(Message.class);
         when(exchange.getIn()).thenReturn(message);
+        when(endpoint.getLocalWorkDirectory()).thenReturn(null);
 
         when(endpoint.getConfiguration()).thenReturn(configuration);
-        when(sftpClient.get(anyString())).thenReturn(InputStream.nullInputStream());
+        when(configuration.isStepwise()).thenReturn(true);
 
-        when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE))
-                .thenReturn(file);
+        when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE)).thenReturn(new GenericFile<>());
+
+        when(sftpClient.get("name")).thenReturn(InputStream.nullInputStream());
 
         assertTrue(sftpOperations.retrieveFile("name",exchange,100));
         verify(sftpClient).get(anyString());
+    }
+
+    @Test
+    public void retrieveFile_whenLocalWorkDirectoryIsConfigured_shouldStoreFile(){
+        String tempDir = System.getProperty("java.io.tmpdir");
+        Exchange exchange = mock(Exchange.class);
+        Message message = mock(Message.class);
+        when(exchange.getIn()).thenReturn(message);
+        when(endpoint.getLocalWorkDirectory()).thenReturn(tempDir);
+        var genericFile = new GenericFile<>();
+        genericFile.setRelativeFilePath("./relative/path");
+
+        when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE)).thenReturn(genericFile);
+
+        when(configuration.isStepwise()).thenReturn(true);
+        when(endpoint.getConfiguration()).thenReturn(configuration);
+        assertTrue(sftpOperations.retrieveFile("name",exchange,100));
+        verify(sftpClient).get(anyString(), any(OutputStream.class));
     }
 }
