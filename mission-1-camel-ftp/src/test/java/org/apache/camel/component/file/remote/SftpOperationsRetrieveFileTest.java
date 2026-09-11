@@ -5,6 +5,7 @@ import org.apache.camel.Message;
 import org.apache.camel.component.file.FileComponent;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.camel.component.file.remote.gateway.SftpClient;
+import org.apache.camel.component.file.remote.gateway.SftpFileMetadata;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -45,16 +47,18 @@ public class SftpOperationsRetrieveFileTest {
     }
 
     @Test
-    public void retrieveFile_whenStoreFileContentDirectoryAsStreamOnTheBody(){
+    public void retrieveFile_whenStoreFileContentDirectoryAndStreamOnTheBodyFalse(){
 
         when(endpoint.getLocalWorkDirectory()).thenReturn(null);
 
         when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE)).thenReturn(new GenericFile<>());
+        when(configuration.isStreamDownload()).thenReturn(false);
 
-        when(sftpClient.get(FILE_NAME)).thenReturn(InputStream.nullInputStream());
-
+        doNothing().when(sftpClient).get(eq(FILE_NAME),any());
         assertTrue(sftpOperations.retrieveFile(FILE_NAME,exchange,100));
-        verify(sftpClient).get(eq(FILE_NAME));
+
+        verify(sftpClient,times(1)).get(eq(FILE_NAME), any(OutputStream.class));
+
     }
 
     @Test
@@ -67,6 +71,31 @@ public class SftpOperationsRetrieveFileTest {
         when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE)).thenReturn(genericFile);
 
         assertTrue(sftpOperations.retrieveFile(FILE_NAME,exchange,100));
-        verify(sftpClient).get(eq(FILE_NAME), any(OutputStream.class));
+        verify(sftpClient,times(1)).get(eq(FILE_NAME), any(OutputStream.class));
+    }
+    @Test
+    public void retrieveFile_whenStoreFileContentDirectoryAsStreamOnTheBody() throws Exception {
+        String path = "MY_PATH";
+
+
+        when(endpoint.getLocalWorkDirectory()).thenReturn(null);
+
+
+        when(configuration.isStepwise()).thenReturn(true);
+        when(configuration.isStreamDownload()).thenReturn(true);
+
+        var genericFile = new GenericFile<SftpFileMetadata>();
+        when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE)).thenReturn(genericFile);
+
+        assertTrue(sftpOperations.retrieveFile(path, exchange, 100L));
+        verify(sftpClient, times(1)).get(eq(path), any(OutputStream.class));
+
+        assertNotNull(genericFile.getBody());
+        assertTrue(genericFile.getBody() instanceof java.io.InputStream);
+
+        verify(message, times(1)).setHeader(
+                eq(FtpConstants.REMOTE_FILE_INPUT_STREAM),
+                any(java.io.InputStream.class)
+        );
     }
 }
