@@ -549,50 +549,24 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
                     = getGenericFile(exchange);
             ObjectHelper.notNull(target, "Exchange should have the " + FileComponent.FILE_EXCHANGE_FILE + " set");
 
-            String remoteName = name;
-            if (endpoint.getConfiguration().isStepwise()) {
-                // remember current directory
-                currentDir = getCurrentDirectory();
-
-                // change directory to path where the file is to be retrieved
-                // (must do this as some FTP servers cannot retrieve using
-                // absolute path)
-                String path = FileUtil.onlyPath(name);
-                if (path != null) {
-                    changeCurrentDirectory(path);
-                }
-                // remote name is now only the file name as we just changed
-                // directory
-                remoteName = FileUtil.stripPath(name);
-            }
-
-            // use input stream which works with Apache SSHD used for testing
-            InputStream is = jschClient.get(remoteName);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            getWithStepwise(name,bos,endpoint.getConfiguration().isStepwise());
 
             if (endpoint.getConfiguration().isStreamDownload()) {
+                InputStream is = new ByteArrayInputStream(bos.toByteArray());
                 target.setBody(is);
                 exchange.getIn().setHeader(FtpConstants.REMOTE_FILE_INPUT_STREAM, is);
             } else {
                 // read the entire file into memory in the byte array
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                IOHelper.copyAndCloseInput(is, bos);
-                // close the stream after done
-                IOHelper.close(bos);
-
                 target.setBody(bos.toByteArray());
             }
 
             createResultHeadersFromExchange(null, exchange);
 
-            // change back to current directory if we changed directory
-            if (currentDir != null) {
-                changeCurrentDirectory(currentDir);
-            }
+
             return true;
         } catch (SftpClientException e) {
             createResultHeadersFromExchange(e, exchange);
-            throw new GenericFileOperationFailedException("Cannot retrieve file: " + name, e);
-        } catch (IOException e) {
             throw new GenericFileOperationFailedException("Cannot retrieve file: " + name, e);
         }
     }
@@ -655,33 +629,10 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
             throw new GenericFileOperationFailedException("Cannot create new local work file: " + local, e);
         }
         try {
-            String currentDir = null;
             // store the java.io.File handle as the body
             file.setBody(local);
 
-            String remoteName = name;
-            if (endpoint.getConfiguration().isStepwise()) {
-                // remember current directory
-                currentDir = getCurrentDirectory();
-
-                // change directory to path where the file is to be retrieved
-                // (must do this as some FTP servers cannot retrieve using
-                // absolute path)
-                String path = FileUtil.onlyPath(name);
-                if (path != null) {
-                    changeCurrentDirectory(path);
-                }
-                // remote name is now only the file name as we just changed
-                // directory
-                remoteName = FileUtil.stripPath(name);
-            }
-
-            jschClient.get(remoteName, os);
-
-            // change back to current directory if we changed directory
-            if (currentDir != null) {
-                changeCurrentDirectory(currentDir);
-            }
+            getWithStepwise(name, os,endpoint.getConfiguration().isStepwise());
 
         } catch (SftpClientException e) {
             createResultHeadersFromExchange(e, exchange);
@@ -715,6 +666,30 @@ public class SftpOperations implements RemoteFileOperations<SftpRemoteFile> {
         }
 
         return true;
+    }
+
+    private void getWithStepwise(String name, OutputStream os,boolean isStepWise) {
+        String currentDir = getCurrentDirectory();
+        String remoteName = name;
+        if (isStepWise) {
+            // remember current directory
+
+            // change directory to path where the file is to be retrieved
+            // (must do this as some FTP servers cannot retrieve using
+            // absolute path)
+            String path = FileUtil.onlyPath(name);
+            if (path != null) {
+                changeCurrentDirectory(path);
+            }
+            // remote name is now only the file name as we just changed
+            // directory
+            remoteName = FileUtil.stripPath(name);
+        }
+
+        jschClient.get(remoteName, os);
+        if (currentDir != null) {
+            changeCurrentDirectory(currentDir);
+        }
     }
 
 
