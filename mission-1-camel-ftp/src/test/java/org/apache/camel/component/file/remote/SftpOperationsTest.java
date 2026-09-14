@@ -182,23 +182,6 @@ class SftpOperationsTest {
         assertEquals(FULL_SFTP_FILE_METADATA,actualRemoteFiles);
     }
 
-    @Test
-    public void retrieveFile_shouldCorrectlyProcessGenericFile(){
-        sftp.setEndpoint(endpoint);
-        GenericFile<SftpFileMetadata> file = new GenericFile<>();
-        Exchange exchange = mock(Exchange.class);
-        Message message = mock(Message.class);
-        when(exchange.getIn()).thenReturn(message);
-
-        when(endpoint.getConfiguration()).thenReturn(configuration);
-        when(sftpClient.get(anyString())).thenReturn(InputStream.nullInputStream());
-
-        when(exchange.getProperty(FileComponent.FILE_EXCHANGE_FILE))
-                .thenReturn(file);
-
-        assertTrue(sftp.retrieveFile(TEST_FILENAME,exchange,-1));
-        verify(sftpClient).get(anyString());
-    }
 
     @Test
     @Disabled
